@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2006 Joao Ramos
+ * Copyright (C) 1999-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -120,15 +120,19 @@ int strpos2(char *s, register char *pat, register int pos)
 
 
 /*
- * Compares two floating point numbers to a given precision.
- * Returns '1'  if they equal and '0' otherwise.
+ * Compares two floating point numbers to a given precision. Returns
+ * '-1' if a<b
+ * ' 0' if a=b
+ * '+1' if a>b
  */
 int fcmp(double a, double b)
 {
 	if (fabs(a-b) < 1e-50) /*Accuracy is 1e-50*/
-		return 1;
+		return 0; /* equal to zero */
+	if (a<b)
+		return -1; /* a<b, not equal to zero */
 	else
-		return 0;
+		return +1; /* a>b, not equal to zero */
 }
 
 
@@ -520,7 +524,7 @@ int extended2engineer(double *num)
 		i += 3;
 		*num /= 1000;
 	}
-	while (*num > -1 && *num != 0) {   /*avoids '0' input never ending cicle*/
+	while (*num > -1 && fcmp(*num,0)) {   /*avoids '0' input never ending cicle*/
 		i -= 3;
 		*num *= 1000;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2010 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
 		printf("\nExamples:\n");
 		printf("          postp -eldo <inputfile>.chi <configfile>\n");
 		printf("          postp -hspice <inputfile>.lis <configfile>\n");
+		printf("          postp -ltspice <inputfile>.log <configfile>\n");
+		printf("          postp -spectre <inputfile>.lis <configfile>\n");		
 		printf("\n\n\n");
 		exit(EXIT_FAILURE);
 	}
@@ -60,17 +62,19 @@ int main(int argc, char *argv[])
 					spice=2;
 				break;
 			case 'l': /*LTspice*/
-				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+				if (!strcmp(argv[1], "ltspice"))
+					spice=3;
 				break;
 			case 's': /*Spectre*/
-				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+				if (!strcmp(argv[1], "spectre"))
+					spice=4;
 				break;
 			case 'q': /*Qucs*/
 				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
-				break;
+				exit(EXIT_FAILURE);
 			case 'g': /*general*/
 				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
-				break;
+				exit(EXIT_FAILURE);
 			default:
 				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
 				exit(EXIT_FAILURE);

@@ -242,7 +242,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	} else {
 		ReadKey(lkk, "# Parameters #", fcfg);   /*configuration parameters*/
 		if (strcmp(lkk, "# Parameters #")) {
-			printf("INFO:  initialize.c - Step2 -- No parameters in config file\n");
+			printf("INFO:  auxfunc_log.c - Step2 -- No parameters in config file\n");
 			SimpleParametersCategory(num_measures-1, llog, stats, &fOut);
 		} else {
 			ComplexParametersCategory(llog, stats, &fOut, &fcfg);

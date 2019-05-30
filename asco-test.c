@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
 	if (1) { /*emulate local search using the global optimizer when (maximum=minimum) and format!=0*/
 		ii=0;
 		while (parameters[ii].format != 0) {
-			if ( fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
-				if (fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
+			if ( !fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
+				if (!fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
 					printf("asco-test.c - Value is zero when using DE in emulated local mode.");
 					exit(EXIT_FAILURE);
 				}

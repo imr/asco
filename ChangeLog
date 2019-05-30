@@ -1,3 +1,17 @@
+ASCO 0.4.7: August 1, 2010
+   * Corrected multiprocessor optimization algorithm message truncation error
+     related to MPI_SCATTERV function
+   * Corrected load balancer implementation
+   * RF module better supports Spectre
+   * Support for LTspice and Spectre in the 'postp' tool
+   * Code clean-up and minor improvements
+
+   Manual:
+   * bandpass example is now supported in Spectre
+
+
+
+
 ASCO 0.4.6: March 25, 2007
    * Improvements in the RF module functionality
    * Include support for logarithmic search space for the existing variables
@@ -26,7 +40,7 @@ ASCO 0.4.5: October 8, 2006
 
 ASCO 0.4.4: August 30, 2006
    * Dynamic load balancing in parallel differential evolution (DE) algorithm
-   * More patches to compile nativley in win32 using MinGW32
+   * More patches to compile natively in win32 using MinGW32
    * Minor bug fixes
 
    Manual:
@@ -39,7 +53,7 @@ ASCO 0.4.4: August 30, 2006
 ASCO 0.4.3: July 1, 2006
    * Qucs simulator is supported
    * Better Ctrl-C handling when using MPI
-   * Patches to compile nativley in win32 using MinGW32
+   * Patches to compile natively in win32 using MinGW32
    * Autotools support
    * Minor compilation/bug fixes
 
@@ -177,5 +191,5 @@ version 0.1.0: July 19, 2004
 
 version 0.0.1: June 25, 2004
     * The first version with less than 500 lines and supporting only Eldo
-      Rudimentary operation using simulated annealing optimization algorithm
+    * Rudimentary operation using simulated annealing optimization algorithm
       implemented in Octave

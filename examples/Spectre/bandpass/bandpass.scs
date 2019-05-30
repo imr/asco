@@ -1,20 +1,32 @@
 *Chebyshev Band Pass Filter
 
 *** *** FILTER CIRCUIT *** ***
-C1 (1 0) capacitor c=#C1# // #CSMD_50p80p#
-L1 (1 0) inductor  l=#L1# // #LBOND_350p450p#
+C1 (1 0) capacitor c=#C1#
+L1 (1 0) inductor  l=#L1#
 
-L2 (1 2) inductor  l=#L2# // #LBOND_60n100n#
-C2 (2 3) capacitor c=#C2# // #CSMD_300f340f#
+L2 (1 2) inductor  l=#L2#
+C2 (2 3) capacitor c=#C2#
 
-C3 (3 0) capacitor c=#C3# // #CSMD_50p80p#
-L3 (3 0) inductor  l=#L3# // #LBOND_350p450p#
+C3 (3 0) capacitor c=#C3#
+L3 (3 0) inductor  l=#L3#
 
 
-*** *** PORT *** ***
-port1 (1 0) port r=50 num=1
-port2 (3 0) port r=50 num=2
+*** *** PORT EMULATION *** ***
+*** http://eesof.tm.agilent.com/docs/iccap2002/MDLGBOOK/5SIMULATIONS/5Spice2Spar.pdf
+*** S11=2*V(1)/Vin-1   S21=2*V(3)/Vin
+Vin (10 0) vsource dc=1 mag=1
+R1  (10 1) resistor r=50
+R3  ( 3 0) resistor r=50
 
 *** *** ANALYSIS *** ***
-analysisAC2 sp dec=1000 start=800M stop=1200M ports=[port1 port2] file="filename"
+analysisAC1 ac dec=1000 start=800M stop=1200M save=all oppoint=none
+
+
+// *** *** PORT *** ***
+// port1 (1 0) port r=50 num=1
+// port2 (3 0) port r=50 num=2
+//
+// *** *** ANALYSIS *** ***
+// analysisAC2 sp dec=1000 start=800M stop=1200M ports=[port1 port2] file="filename"
+
 // End of Netlist

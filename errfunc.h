@@ -15,6 +15,7 @@
  * global variable declarations                            */
 
 
+//double errfunc(char *filename, double *x, double xXx[][]);
 double errfunc(char *filename, double *x);
 /* void LogtoFile(double cost,char *hostname); */
 /* double CostFunction(); */

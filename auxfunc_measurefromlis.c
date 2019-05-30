@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2006 Joao Ramos
+ * Copyright (C) 1999-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -193,7 +193,7 @@ void DoMath(int num_measures)
 				/*Step1*/
 				k=0;
 				sprintf(STR1, "%.*s", (int)strlen(lkk1), lkk1);
-				l = (sscanf(STR1, "%i", &k) == 0); /*'l' is zero if a number is read*/
+				l = sscanf(STR1, "%i", &k); /*'l' is one if a number is read*/
 				if (lkk1[0] == '&') { /*to read one measurement*/
 					l = (sscanf(strsub(STR1, lkk1, 2, (int)strlen(lkk1)), "%i", &k) == 0); /* &<digit> format else is */
 					if (k == 0) {
@@ -207,7 +207,7 @@ void DoMath(int num_measures)
 					}
 					data = asc2real(measure[k].data, 1, (int)strlen(measure[k].data));
 				} else {
-					if (l == 0) /*to read one number*/
+					if (l == 1) /*to read one number*/
 						data = asc2real(STR1, 1, (int)strlen(STR1));
 					else {      /*to read a mathematical operator*/
 						switch (lkk1[0]) {
@@ -224,7 +224,7 @@ void DoMath(int num_measures)
 								break;
 
 							case '/': /*divide*/
-								if (!fcmp(RPN1, 0))
+								if (fcmp(RPN1, 0))
 									data = RPN2 / RPN1;
 								else {
 									printf("auxfunc_measurefromlis.c - DoMath -- MATH divided by zero => %s\n", measure[i - 1].search);
@@ -335,7 +335,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 				aux = asc2real(laux1, 1, (int)strlen(laux1));
 				j = extended2engineer(&aux);
 				/*debug*/
-				if (!fcmp(aux,0)) { /* we are going to read a number */
+				if (fcmp(aux,0)) { /* we are going to read a number */
 					sprintf(laux1, "%7.3f", aux);
 					sprintf(laux2, "%i", j);
 					sprintf(line + (int)strlen(line), "%se%s | ", laux1, laux2);
@@ -408,7 +408,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 			aux = asc2real(laux1, 1, (int)strlen(laux1));
 			j = extended2engineer(&aux);
 			/*debug*/
-			if (!fcmp(aux,0)) { /*we are going to read a number*/
+			if (fcmp(aux,0)) { /*we are going to read a number*/
 				sprintf(laux1, "%7.3f", aux);
 				sprintf(laux2, "%i", j);
 				fprintf(*fSummary, "%se%s | ", laux1, laux2);

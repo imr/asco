@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Joao Ramos
+ * Copyright (C) 2004-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -36,12 +36,12 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 {
 	double result;
 
-	if (fcmp(inb, ina)) {
+	if (!fcmp(inb, ina)) {
 		printf("initialize.c - scaleto -- 'ina' and 'inb' cannot be equal\n");
 		exit(EXIT_FAILURE);
 	}
 	#ifdef DEBUG
-	if (fcmp(outb, outa))
+	if (!fcmp(outb, outa))
 		printf("INFO:  initialize.c - scaleto -- 'outa' and 'outb' are equal\n");
 	#endif
 
@@ -495,6 +495,7 @@ int initialize(char *filename) /* , double *x) */
 		exit(EXIT_FAILURE);
 	}
 
+	/*Step4.1: ".end" not yet found*/
 	fgets2(lkk, LONGSTRINGSIZE, fspice_source);  /*read and             */
 	fprintf(fspice_tmp, "%s\n", lkk);            /*write the first line */
 	while (!P_eof(fspice_source)) {
@@ -503,28 +504,27 @@ int initialize(char *filename) /* , double *x) */
 		strcpy(laux, lkk);           /*detect ".end", ".END", ".End", ... */
 		Str2Lower(laux);
 		StripSpaces(laux);           /* avoid spaces after the command ".end" */
-	/*Step4.1: ".end" not yet found*/
-		if (strcmp(laux, ".end")) {
+		if (!strcmp(laux, ".end"))
+			break;
 
-			/***** -------------- *********** -------------- *****/
-			/***** -------------- ** BEGIN ** -------------- *****/
-			if (lkk[0]!='*') {
-				i=inlinestrpos(lkk);
-				ii=1;
-				ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-				if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?           */
-					if ((int)strlen(lkk) && (!RFModule(lkk, 0, fspice_tmp)) )
-						fprintf(fspice_tmp, "%s\n", lkk);                      /* no: write line to <hostname>.tmp     */
-				} else {                                                               /* yes: replace #<text># in this line   */
-					if (!RFModule(lkk, 0, fspice_tmp)) {                           /*      -Symbol replaced in the RFmodule*/
-						ReplaceSymbol(lkk, 0);                                 /*      -Symbol yet to be replaced      */
-						fprintf(fspice_tmp, "%s\n", lkk); /* write line to <hostname>.tmp */
-					}
+		/***** -------------- *********** -------------- *****/
+		/***** -------------- ** BEGIN ** -------------- *****/
+		if (lkk[0]!='*') {
+			i=inlinestrpos(lkk);
+			ii=1;
+			ReadSubKey(laux, lkk, &ii, '#', '#', 0);
+			if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?           */
+				if ((int)strlen(lkk) && (!RFModule(lkk, 0, fspice_tmp)) )
+					fprintf(fspice_tmp, "%s\n", lkk);                      /* no: write line to <hostname>.tmp     */
+			} else {                                                               /* yes: replace #<text># in this line   */
+				if (!RFModule(lkk, 0, fspice_tmp)) {                           /*      -Symbol replaced in the RFmodule*/
+					ReplaceSymbol(lkk, 0);                                 /*      -Symbol yet to be replaced      */
+					fprintf(fspice_tmp, "%s\n", lkk); /* write line to <hostname>.tmp */
 				}
 			}
-			/***** -------------- **  END  ** -------------- *****/
-			/***** -------------- *********** -------------- *****/
 		}
+		/***** -------------- **  END  ** -------------- *****/
+		/***** -------------- *********** -------------- *****/
 	}
 	switch(spice) {
 		case 1: /*Eldo*/

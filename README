@@ -1,4 +1,4 @@
-ASCO-0.4.6
+ASCO-0.4.7
 
 ------------------------------------------------------------------------
 1. INSTALLING ASCO
@@ -6,14 +6,14 @@ ASCO-0.4.6
    should follows relatively easily. Download the latest version and at
    the command line type the following:
 
-   tar -zxvf asco-<version>.tar.gz
-   cd asco-<version>
+   tar -zxvf ASCO-<version>.tar.gz
+   cd ASCO-<version>
    make
 
 
 2. MANUAL
    For guidelines on how to better profit from the ASCO tool, please read
-   the existing pdf manual in asco-<version>/doc/asco.pdf
+   the existing pdf manual in ASCO-<version>/doc/ASCO.pdf
 
 
 3. BUGS
@@ -24,4 +24,4 @@ ASCO-0.4.6
 
 
 ------------------------------------------------------------------------
-Copyright (C) 1999-2007 Joao Ramos
+Copyright (C) 1999-2010 Joao Ramos

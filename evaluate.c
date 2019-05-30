@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Joao Ramos
+ * Copyright (C) 2004-2010 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -59,7 +59,7 @@ double evaluate(int D, double x[], char *filename)
 			cost=cost+9e99*(x[ii]-10);
 		}
 	}
-	if (!fcmp(cost, 0))
+	if (fcmp(cost, 0))
 		return(cost);
 	#endif
 

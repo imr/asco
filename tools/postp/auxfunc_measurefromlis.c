@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2006 Joao Ramos
+ * Copyright (C) 1999-2010 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -42,14 +42,14 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
 			if (mem) { /*mem=1*/
 				ReadSubKey(lkk1, measure[i].var_name, &j, '(', ')', 0);
 				if ( ((int)strlen(lkk1)) && (measure[i].s_column1==0) && (measure[i].column2==0) )
-					return 1; /*its a transistor*/
+					return 1; /*it is a transistor*/
 				else
 					return 0;
 			} else {  /*mem=0*/
 				strsub(lkk1, line, 1, 9);
 				if ( (!strcmp("        M", lkk1)) || (!strcmp("        X", lkk1)) )                                                                /*checks first line*/
 					if ( (strpos2(nextline, "MODEL   ", 1) != 0)  && ((strpos2(nextline, "PMOS", 1) != 0) || (strpos2(nextline, "NMOS", 1))) ) /*checks second line*/
-						return 1; /*its a transistor*/
+						return 1; /*it is a transistor*/
 					else
 						return 0;
 				else
@@ -60,13 +60,13 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
 			if (mem) { /*mem=1*/
 				ReadSubKey(lkk1, measure[i].var_name, &j, '(', ')', 0);
 				if ( ((int)strlen(lkk1)) && (measure[i].s_column1==0) && (measure[i].column2==0) )
-					return 1; /*its a transistor*/
+					return 1; /*it is a transistor*/
 				else
 					return 0;
 			} else {   /*mem=0*/
 				if ( (strpos2(line, "element  ", 1) != 0) && (strpos2(line, ":m", 1)) )                                                             /*checks first line*/
 					if ( (strpos2(nextline, " model ", 1) != 0)  && ((strpos2(nextline, ":pmos", 1) != 0) || (strpos2(nextline, ":nmos", 1))) ) /*checks second line*/
-						return 1; /*its a transistor*/
+						return 1; /*it is a transistor*/
 					else
 						return 0;
 				else
@@ -74,10 +74,39 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
 			}
 			break;
 		case 3: /*LTspice*/
-			return 0;
+			if (mem) { /*mem=1*/
+				ReadSubKey(lkk1, measure[i].var_name, &j, '(', ')', 0);
+				if ( ((int)strlen(lkk1)) && (measure[i].s_column1==0) && (measure[i].column2==0) )
+					return 1; /*it is a transistor*/
+				else
+					return 0;
+			} else {   /*mem=0*/
+				if ( (strpos2(line, "Name:    ", 1) != 0) && (strpos2(line, "m:", 1)) )                                                             /*checks first line*/
+					if ( (strpos2(nextline, "Model: ", 1) != 0)  && ((strpos2(nextline, " pmos", 1) != 0) || (strpos2(nextline, " nmos", 1))) ) /*checks second line*/
+						return 1; /*it is a transistor*/
+					else
+						return 0;
+				else
+					return 0;
+			}
 			break;
-		case 4: /*Spectre*/
-			return 0;
+		case 4: /*Spectre*/ //NEEDS WORK TO MAKE IT MORE ROBUST/CORRECT
+			if (mem) { /*mem=1*/
+				ReadSubKey(lkk1, measure[i].var_name, &j, '(', ')', 0);
+				if ( ((int)strlen(lkk1)) && (measure[i].s_column1==0) && (measure[i].column2==0) )
+					return 1; /*it is a transistor*/
+				else
+					return 0;
+			} else {   /*mem=0*/
+				if ( (strpos2(line, "Instance: ", 1) != 0) && (strpos2(line, " M", 1)) )                                                            /*checks first line*/
+					if ( (strpos2(nextline, "Model: ", 1) != 0)  && ((strpos2(nextline, " pch.", 1) != 0) || (strpos2(nextline, " nch.", 1))) ) /*checks second line*/
+						return 1; /*it is a transistor*/
+					else
+						return 0;
+				else
+					return 0;
+			}
+			break;
 			break;
 		case 50: /*Qucs*/
 			return 0;
@@ -140,11 +169,21 @@ int DetectsTransistorColumns(char *lelement, int index[])
 			index[j] = i + 1;                     /*corrects size for last column*/
 			break;
 		case 3: /*LTspice*/
-			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- LTspice not supported\n");
-			exit(EXIT_FAILURE);
+			while (i < (int)strlen(lelement)) {
+				if ((lelement[i - 3] == ' ') && (lelement[i - 2] == 'm') && (lelement[i - 1] == ':')) {
+					j++;                  /*how many columns with transistors ?*/
+					index[j - 1] = i - 1; /*saves column for print*/
+					i++;
+				} else
+					i++;
+			}
+			index[j] = i + 1;                     /*corrects size for last column*/
+			break;
 		case 4: /*Spectre*/
-			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- Spectre not supported\n");
-			exit(EXIT_FAILURE);
+			index[0]=11;
+			index[1]=99;
+			j=1;
+			break;
 		case 50: /*Qucs*/
 			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
@@ -193,7 +232,7 @@ void DoMath(int num_measures)
 				/*Step1*/
 				k=0;
 				sprintf(STR1, "%.*s", (int)strlen(lkk1), lkk1);
-				l = (sscanf(STR1, "%i", &k) == 0); /*'l' is zero if a number is read*/
+				l = sscanf(STR1, "%i", &k); /*'l' is one if a number is read*/
 				if (lkk1[0] == '&') { /*to read one measurement*/
 					l = (sscanf(strsub(STR1, lkk1, 2, (int)strlen(lkk1)), "%i", &k) == 0); /* &<digit> format else is */
 					if (k == 0) {
@@ -207,7 +246,7 @@ void DoMath(int num_measures)
 					}
 					data = asc2real(measure[k].data, 1, (int)strlen(measure[k].data));
 				} else {
-					if (l == 0) /*to read one number*/
+					if (l == 1) /*to read one number*/
 						data = asc2real(STR1, 1, (int)strlen(STR1));
 					else {      /*to read a mathematical operator*/
 						switch (lkk1[0]) {
@@ -224,7 +263,7 @@ void DoMath(int num_measures)
 								break;
 
 							case '/': /*divide*/
-								if (!fcmp(RPN1, 0))
+								if (fcmp(RPN1, 0))
 									data = RPN2 / RPN1;
 								else {
 									printf("auxfunc_measurefromlis.c - DoMath -- MATH divided by zero => %s\n", measure[i - 1].search);
@@ -305,13 +344,16 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 
 	/*Step0: Compute the values for statistics*/
 	for (i = 1; i <= num_measures; i++) {
-		aux = asc2real(measure[i].data, 1, (int)strlen(measure[i].data));
-		stats->avg[i] += aux;
-		stats->sig[i] += aux * aux; /*variance=sum(x^2)/n - (avg(x))^2 : sigma=sqrt(variance)*/
-		if (aux > stats->max[i])
-			stats->max[i] = aux;
-		if (aux < stats->min[i])
-			stats->min[i] = aux;
+		if (strlen(measure[i].data)) {
+			aux = asc2real(measure[i].data, 1, (int)strlen(measure[i].data));
+			stats->avg[i] += aux;
+			stats->sig[i] += aux * aux; /*variance=sum(x^2)/n - (avg(x))^2 : sigma=sqrt(variance)*/
+			if (aux > stats->max[i])
+				stats->max[i] = aux;
+			if (aux < stats->min[i])
+				stats->min[i] = aux;
+			stats->num[i]++;
+		}
 	}
 	/*Step0*/
 
@@ -320,11 +362,26 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 		*line = '\0';
 		StripSpaces(laux);
 
-		if (*measure[0].data == '\0') {       /*Was ALTER found?*/
-			if (laux[0] != '@')           /*ALTER was not found*/
-				strcpy(laux, "                     ");
+		if (*measure[0].data == '\0') {             /*Was ALTER found?   */
+			switch(spice) {
+				case 1: /*Eldo*/
+					break;
+				case 2: /*HSPICE*/
+					if (laux[0] != '@') /*ALTER was not found*/
+						strcpy(laux, "                     ");
+					break;
+				case 3: /*LTspice*/
+				case 4: /*Spectre*/
+				case 50: /*Qucs*/
+				case 100: /*general*/
+					strcpy(laux, "                     ");
+					break;
+				default:
+					printf("auxfunc_measurefromlis.c - WriteToFile -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
+			}
 			FORLIM = (int)strlen(laux);
-			for (i = 1; i <= FORLIM; i++) /*ALTER was found*/
+			for (i = 1; i <= FORLIM; i++)       /*ALTER was found    */
 				strcat(line, " ");
 		}
 
@@ -335,7 +392,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 				aux = asc2real(laux1, 1, (int)strlen(laux1));
 				j = extended2engineer(&aux);
 				/*debug*/
-				if (!fcmp(aux,0)) { /* we are going to read a number */
+				if (fcmp(aux,0)) { /* we are going to read a number */
 					sprintf(laux1, "%7.3f", aux);
 					sprintf(laux2, "%i", j);
 					sprintf(line + (int)strlen(line), "%se%s | ", laux1, laux2);
@@ -393,9 +450,24 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 		putc('\n', *fSummary);
 	}
 
-	if (*measure[0].data == '\0') { /*Was ALTER found?*/
-		if (laux[0] != '@')     /*ALTER was not found*/
-			strcpy(laux, "                     ");
+	if (*measure[0].data == '\0') {             /*Was ALTER found?   */
+		switch(spice) {
+			case 1: /*Eldo*/
+				break;
+			case 2: /*HSPICE*/
+				if (laux[0] != '@') /*ALTER was not found*/
+					strcpy(laux, "                     ");
+				break;
+			case 3: /*LTspice*/
+			case 4: /*Spectre*/
+			case 50: /*Qucs*/
+			case 100: /*general*/
+				strcpy(laux, "                     ");
+				break;
+			default:
+				printf("auxfunc_measurefromlis.c - WriteToFile -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
+		}
 		FORLIM = (int)strlen(laux);
 		for (i = 1; i <= FORLIM; i++)
 			putc(' ', *fSummary);
@@ -408,7 +480,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 			aux = asc2real(laux1, 1, (int)strlen(laux1));
 			j = extended2engineer(&aux);
 			/*debug*/
-			if (!fcmp(aux,0)) { /*we are going to read a number*/
+			if (fcmp(aux,0)) { /*we are going to read a number*/
 				sprintf(laux1, "%7.3f", aux);
 				sprintf(laux2, "%i", j);
 				fprintf(*fSummary, "%se%s | ", laux1, laux2);
@@ -465,12 +537,24 @@ void WriteStats(int num_measures, int data_lines, statistics stats, FILE **fSumm
 
 	putc('\n', *fSummary);
 	for (i = 1; i <= num_measures; i++) {
-		if (data_lines != 0) {
-			stats.avg[i] /= data_lines;     /*average value*/
+		//if (data_lines != 0) {
+		if (stats.num[i] != 0) {
+			{
+			stats.avg[i] /= stats.num[i];   /*average value*/
 			TEMP = stats.avg[i];
-			stats.sig[i] = sqrt(fabs(stats.sig[i] / data_lines - TEMP * TEMP));
+			stats.sig[i] = sqrt(fabs(stats.sig[i] / stats.num[i] - TEMP * TEMP));
 				if (stats.sig[i] < fabs(stats.max[i]/1000))
 					stats.sig[i]=0; /*standard deviation*/
+			}
+		} else {
+			#ifndef ASCO
+			printf("INFO:  auxfunc_measurefromlis - WriteStats -- Data was not read for %s.\n", measure[i].var_name);
+			#endif
+			#ifdef ASCO
+			#ifdef DEBUG
+			printf("INFO:  auxfunc_measurefromlis - WriteStats -- Data was not read for %s.\n", measure[i].var_name);
+			#endif
+			#endif
 		}
 	}
 
@@ -613,11 +697,173 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 			 */
 			break;
 		case 3: /*LTspice*/
-			printf("auxfunc_measurefromlis.c - CMOSText2Line -- LTspice not supported\n");
-			exit(EXIT_FAILURE);
+			if (!strcmp(lkk2, "Id"))
+				Result = 2;
+			if (!strcmp(lkk2, "Vgs"))
+				Result = 3;
+			if (!strcmp(lkk2, "Vds"))
+				Result = 4;
+			if (!strcmp(lkk2, "Vbs"))
+				Result = 5;
+			if (!strcmp(lkk2, "Vth"))
+				Result = 6;
+			if (!strcmp(lkk2, "Vdsat"))
+				Result = 7;
+			if (!strcmp(lkk2, "Gm"))
+				Result = 8;
+			if (!strcmp(lkk2, "Gds"))
+				Result = 9;
+			if (!strcmp(lkk2, "Gmb"))
+				Result = 10;
+			if (!strcmp(lkk2, "Cbd"))
+				Result = 11;
+			if (!strcmp(lkk2, "Cbs"))
+				Result = 12;
+			if (!strcmp(lkk2, "Cgsov"))
+				Result = 13;
+			if (!strcmp(lkk2, "Cgdov"))
+				Result = 14;
+			if (!strcmp(lkk2, "Cgbov"))
+				Result = 15;
+			if (!strcmp(lkk2, "dQgdVgb"))
+				Result = 16;
+			if (!strcmp(lkk2, "dQgdVdb"))
+				Result = 17;
+			if (!strcmp(lkk2, "dQgdVsb"))
+				Result = 18;
+			if (!strcmp(lkk2, "dQddVgb"))
+				Result = 19;
+			if (!strcmp(lkk2, "dQddVdb"))
+				Result = 20;
+			if (!strcmp(lkk2, "dQddVsb"))
+				Result = 21;
+			if (!strcmp(lkk2, "dQbdVgb"))
+				Result = 22;
+			if (!strcmp(lkk2, "dQbdVdb"))
+				Result = 23;
+			if (!strcmp(lkk2, "dQbdVsb"))
+				Result = 24;
+			break;
 		case 4: /*Spectre*/
-			printf("auxfunc_measurefromlis.c - CMOSText2Line -- Spectre not supported\n");
-			exit(EXIT_FAILURE);
+			if (!strcmp(lkk2, "d"))
+				Result = 3;
+			if (!strcmp(lkk2, "g"))
+				Result = 4;
+			if (!strcmp(lkk2, "s"))
+				Result = 5;
+			if (!strcmp(lkk2, "b"))
+				Result = 6;
+			if (!strcmp(lkk2, "type"))
+				Result = 7;
+			if (!strcmp(lkk2, "region"))
+				Result = 8;
+			if (!strcmp(lkk2, "reversed"))
+				Result = 9;
+			if (!strcmp(lkk2, "ids"))
+				Result = 10;
+			if (!strcmp(lkk2, "isub"))
+				Result = 11;
+			if (!strcmp(lkk2, "vgs"))
+				Result = 12;
+			if (!strcmp(lkk2, "vds"))
+				Result = 13;
+			if (!strcmp(lkk2, "vbs"))
+				Result = 14;
+			if (!strcmp(lkk2, "vth"))
+				Result = 15;
+			if (!strcmp(lkk2, "vdsat"))
+				Result = 16;
+			if (!strcmp(lkk2, "gm"))
+				Result = 17;
+			if (!strcmp(lkk2, "gds"))
+				Result = 18;
+			if (!strcmp(lkk2, "gmbs"))
+				Result = 19;
+			if (!strcmp(lkk2, "betaeff"))
+				Result = 20;
+			if (!strcmp(lkk2, "cjd"))
+				Result = 21;
+			if (!strcmp(lkk2, "cjs"))
+				Result = 22;
+			if (!strcmp(lkk2, "qb"))
+				Result = 23;
+			if (!strcmp(lkk2, "qg"))
+				Result = 24;
+			if (!strcmp(lkk2, "qd"))
+				Result = 25;
+			if (!strcmp(lkk2, "qbd"))
+				Result = 26;
+			if (!strcmp(lkk2, "qbs"))
+				Result = 27;
+			if (!strcmp(lkk2, "cgg"))
+				Result = 28;
+			if (!strcmp(lkk2, "cgd"))
+				Result = 29;
+			if (!strcmp(lkk2, "cgs"))
+				Result = 30;
+			if (!strcmp(lkk2, "cgb"))
+				Result = 31;
+			if (!strcmp(lkk2, "cdg"))
+				Result = 32;
+			if (!strcmp(lkk2, "cdd"))
+				Result = 33;
+			if (!strcmp(lkk2, "cds"))
+				Result = 34;
+			if (!strcmp(lkk2, "cdb"))
+				Result = 35;
+			if (!strcmp(lkk2, "csg"))
+				Result = 36;
+			if (!strcmp(lkk2, "csd"))
+				Result = 37;
+			if (!strcmp(lkk2, "css"))
+				Result = 38;
+			if (!strcmp(lkk2, "csb"))
+				Result = 39;
+			if (!strcmp(lkk2, "cbg"))
+				Result = 40;
+			if (!strcmp(lkk2, "cbd"))
+				Result = 41;
+			if (!strcmp(lkk2, "cbs"))
+				Result = 42;
+			if (!strcmp(lkk2, "cbb"))
+				Result = 43;
+			if (!strcmp(lkk2, "ron"))
+				Result = 44;
+			if (!strcmp(lkk2, "id"))
+				Result = 45;
+			if (!strcmp(lkk2, "is"))
+				Result = 46;
+			if (!strcmp(lkk2, "ibulk"))
+				Result = 47;
+			if (!strcmp(lkk2, "ibs"))
+				Result = 48;
+			if (!strcmp(lkk2, "ibd"))
+				Result = 49;
+			if (!strcmp(lkk2, "pwr"))
+				Result = 50;
+			if (!strcmp(lkk2, "gmoverid"))
+				Result = 51;
+			if (!strcmp(lkk2, "cgsovl"))
+				Result = 52;
+			if (!strcmp(lkk2, "cgdovl"))
+				Result = 53;
+			if (!strcmp(lkk2, "cgbovl"))
+				Result = 54;
+			if (!strcmp(lkk2, "i1"))
+				Result = 55;
+			if (!strcmp(lkk2, "i3"))
+				Result = 56;
+			if (!strcmp(lkk2, "i4"))
+				Result = 57;
+			if (!strcmp(lkk2, "gbd"))
+				Result = 58;
+			if (!strcmp(lkk2, "gbs"))
+				Result = 59;
+			if (!strcmp(lkk2, "vgsteff"))
+				Result = 60;
+			if (!strcmp(lkk2, "qinv"))
+				Result = 61;
+			break;
 		case 50: /*Qucs*/
 			printf("auxfunc_measurefromlis.c - CMOSText2Line -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
@@ -629,9 +875,10 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 			exit(EXIT_FAILURE);
 	}
 
-
-
-
+	if (Result==0) {
+		printf("auxfunc_measurefromlis.c - CMOSText2Line -- String '%s' was not found. Verify MEASURE_VAR in <configfile>\n", lkk2);
+		exit(EXIT_FAILURE);
+	}
 	return Result;
 } /*CMOSText2Line*/
 
@@ -653,122 +900,93 @@ char *CMOSLine2Text(char *Result, int measure_x_lines_below, char *OutputFile)
 				case 3:
 					strcpy(Result, "ID");
 					break;
-
 				case 4:
 					strcpy(Result, "VGS");
 					break;
-
 				case 5:
 					strcpy(Result, "VDS");
 					break;
-
 				case 6:
 					strcpy(Result, "VBS");
 					break;
-
 				case 7:
 					strcpy(Result, "VTH");
 					break;
-
 				case 8:
 					strcpy(Result, "VDSAT");
 					break;
-
 				case 9:
 					strcpy(Result, "VDSAT");
 					break;
-
 				case 10:
 					strcpy(Result, "GDS");
 					break;
-
 				case 11:
 					strcpy(Result, "GMB");
 					break;
-
 				case 12:
 					strcpy(Result, "Cdd");
 					break;
-
 				case 13:
 					strcpy(Result, "Cdg");
 					break;
-
 				case 14:
 					strcpy(Result, "Cds");
 					break;
-
 				case 15:
 					strcpy(Result, "Cdb");
 					break;
-
 				case 16:
 					strcpy(Result, "Cgd");
 					break;
-
 				case 17:
 					strcpy(Result, "Cgg");
 					break;
-
 				case 18:
 					strcpy(Result, "Cgs");
 					break;
-
 				case 19:
 					strcpy(Result, "Cgb");
 					break;
-
 				case 20:
 					strcpy(Result, "Csd");
 					break;
-
 				case 21:
 					strcpy(Result, "Csg");
 					break;
-
 				case 22:
 					strcpy(Result, "Css");
 					break;
-
 				case 23:
 					strcpy(Result, "Csb");
 					break;
-
 				case 24:
 					strcpy(Result, "Cbd");
 					break;
-
 				case 25:
 					strcpy(Result, "Cbg");
 					break;
-
 				case 26:
 					strcpy(Result, "Cbs");
 					break;
-
 				case 27:
 					strcpy(Result, "Cbb");
 					break;
-
 				case 28:
 					strcpy(Result, "PHI");
 					break;
-
 				case 29:
 					strcpy(Result, "VBI");
 					break;
-
 				case 30:
 					strcpy(Result, "Region");
 					break;
-
 				case 31:
 					strcpy(Result, "VTH_D");
 					break;
-
 				default:
-					strcpy(Result, "");
-					break;
+					printf("auxfunc_measurefromlis.c - CMOSLine2Text -- entry must be smaller than 31\n");
+					exit(EXIT_FAILURE);
 			}
 			break;
 		case 2: /*HSPICE*/
@@ -794,82 +1012,63 @@ char *CMOSLine2Text(char *Result, int measure_x_lines_below, char *OutputFile)
 				case 2:
 					strcpy(Result, "id");
 					break;
-
 				case 3:
 					strcpy(Result, "ibs");
 					break;
-
 				case 4:
 					strcpy(Result, "ibd");
 					break;
-
 				case 5:
 					strcpy(Result, "vgs");
 					break;
-
 				case 6:
 					strcpy(Result, "vds");
 					break;
-
 				case 7:
 					strcpy(Result, "vbs");
 					break;
-
 				case 8:
 					strcpy(Result, "vth");
 					break;
-
 				case 9:
 					strcpy(Result, "vdsat");
 					break;
-
 				case 10:
 					strcpy(Result, "beta");
 					break;
-
 				case 11:
 					strcpy(Result, "gam eff");
 					break;
-
 				case 12:
 					strcpy(Result, "gm");
 					break;
-
 				case 13:
 					strcpy(Result, "gds");
 					break;
-
 				case 14:
 					strcpy(Result, "gmb");
 					break;
-
 				case 15:
 					strcpy(Result, "cdtot");
 					break;
-
 				case 16:
 					strcpy(Result, "cgtot");
 					break;
-
 				case 17:
 					strcpy(Result, "cstot");
 					break;
-
 				case 18:
 					strcpy(Result, "cbtot");
 					break;
-
 				case 19:
 					strcpy(Result, "cgs");
 					break;
-
 				case 20:
 					strcpy(Result, "cgd");
 					break;
-
 				default:
-					strcpy(Result, "");
-					break;
+					printf("auxfunc_measurefromlis.c - CMOSLine2Text -- entry must be smaller than 21\n");
+					exit(EXIT_FAILURE);
 			}
 			break;
 		case 3: /*LTspice*/
@@ -920,6 +1119,12 @@ int ProcessMeasureVar(char *measure_var_line, int k, char *OutputFile)
 	StripSpaces(lkk1);
 	if (!strcmp(lkk1,"SEARCH_FOR"))
 		ReadSubKey(measure[k].search, measure_var_line, &i, '\'', '\'', 5); /* search */
+	else { /* if "SEARCH_FOR" does not exist, "MATH" must be found*/
+		if ( !strpos2(measure_var_line, "MATH", 1) ) {
+			printf("auxfunc_measurefromlis.c - ProcessMeasureVar -- Incorrect line format: %s\n", measure_var_line);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/*Is the current variable a transistor?*/
 	if ( strpos2(measure_var_line, "SEARCH_FOR", 1) && (!strpos2(measure_var_line, "S_COL", 1)) && strpos2(measure_var_line, "P_LINE", 1) && (!strpos2(measure_var_line, "P_COL", 1)) ) {
@@ -928,7 +1133,7 @@ int ProcessMeasureVar(char *measure_var_line, int k, char *OutputFile)
 		strcpy(measure[k].var_name, STR3);
 
 		strsub(lkk1, measure_var_line, strpos2(measure_var_line, "P_LINE", 1) + 6, (int)strlen(measure_var_line));
-		Str2Lower(lkk1); /*Just to avoid crazy engineers*/
+		//character case is needed for Eldo and LTspice// Str2Lower(lkk1); /*Just to avoid crazy engineers*/
 		/* lkk1[0] = ','; */
 
 		a = 1;
@@ -1086,12 +1291,34 @@ int ReadDataFromConfigFile(char *ConfigFile, char *OutputFile)
 		return EXIT_SUCCESS;
 	}
 
-	strcpy(measure[0].var_name, "Simulation Conditions");
-	strcpy(measure[0].search, "******    alter processing listing");
-	measure[0].s_column1 = 1;
-	/*@@    measure[1].s_column2:=37;*/
-	measure[0].line = 0;   /*-1: ??????*/
-	measure[0].column1 = 1; measure[0].column2 = 0;
+	switch(spice) {
+		case 1: /*Eldo*/
+			strcpy(measure[0].var_name, "Simulation Conditions");
+			strcpy(measure[0].search, "****************************************************");
+			measure[0].s_column1 = 1;
+			/*@@    measure[1].s_column2:=37;*/
+			measure[0].line = 2;   /*-1: ??????*/
+			measure[0].column1 = 1; measure[0].column2 = 0;
+			break;
+		case 2: /*HSPICE*/
+			strcpy(measure[0].var_name, "Simulation Conditions");
+			strcpy(measure[0].search, "  ******    alter processing listing");
+			measure[0].s_column1 = 1;
+			/*@@    measure[1].s_column2:=37;*/
+			measure[0].line = 0;   /*-1: ??????*/
+			measure[0].column1 = 1; measure[0].column2 = 0;
+			break;
+		case 3: /*LTspice*/
+		case 4: /*Spectre*/
+		case 50: /*Qucs*/
+		case 100: /*general*/
+			strcpy(measure[0].var_name, "Simulation Conditions");
+			strcpy(measure[0].search, "Not To Be Found");
+			break;
+		default:
+			printf("auxfunc_measurefromlis.c - ReadDataFromConfigFile -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
 	k = 1; /*starts in 1, because the first one is '******    alter processing listing'*/
 /*------------------------------------------------------------------*/
 	/*BEGIN: read data from SWEEP.INI file*/
@@ -1137,7 +1364,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 	int a, b=0, c, i, j, k, l;
 	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
 	char lprevious[LONGSTRINGSIZE], lnext[LONGSTRINGSIZE]; /*previous and next line in the simulation output file; lkk hold current line*/
-	char lelement[LONGSTRINGSIZE]; /*when a transistor is found, the line with its names is stored in here*/
+	char lelement[LONGSTRINGSIZE]; /*when a transistor is found, the line with their names is stored in here*/
 	int measure_p_line[MAXMEAS];
 	int read_p_line;
 	statistics stats;
@@ -1160,6 +1387,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 		stats.sig[i] = 0.0;
 		stats.max[i] = -1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
 		stats.min[i] = +1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
+		stats.num[i] = 0.0;
 	}
 
 	if ((fLIS=fopen(OutputFile,"rt")) == 0) { /* *.lis filename */
@@ -1202,16 +1430,42 @@ void ProcessOutputFile(char *OutputFile, int mem)
 		read_p_line = FALSE;
 		for (k = 0; k <= j; k++) { /*1- for each one of the input lines, look if it is necessary to measure something*/
 			/*Step lkk1*/
-			strsub(lkk1, lkk, (int)measure[k].s_column1, (int)(strlen(measure[k].search) + 2));
-			StripSpaces(lkk1); /*necessary when we want to find '******    alter processing listing'*/
+			strsub(lkk1, lkk, (int)measure[k].s_column1, (int)strlen(measure[k].search) + 0);
+			//-- StripSpaces(lkk1); /*necessary when we want to find '******    alter processing listing'*/
 
 			/*Step lkk2*/
 			c = 0;
 			if (IsItATransistor(lkk, 0, 0, lnext)) {                       /*if it is a transistor, I know the format*/
-				for (a = 1; a <= b; a++) {
-					if (strpos2(lkk, measure[k].search, 1) == index[a - 1])
-						c = a;
+
+
+				//jramos
+				switch(spice) {
+					case 1: /*Eldo*/
+					case 2: /*HSPICE*/
+					case 3: /*LTspice*/
+						for (a = 1; a <= b; a++) {
+							if (strpos2(lkk, measure[k].search, 1) == index[a - 1])
+								c = a;
+						}
+						break;
+					case 4: /*Spectre*/
+						c=1;
+						break;
+					case 50: /*Qucs*/
+						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Qucs not supported\n");
+						exit(EXIT_FAILURE);
+						break;
+					case 100: /*general*/
+						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- GENERAL ot supported\n");
+						exit(EXIT_FAILURE);
+						break;
+					default:
+						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Something unexpected has happened!\n");
+						exit(EXIT_FAILURE);
 				}
+				//jramos
+
+
 			}
 			if (c != 0) {                                                  /*if !=0, then we have found a transistor definition*/
 				strcpy(lelement, lkk); /*saves, because 'lkk' will be destroyed afterwards*/
@@ -1243,19 +1497,68 @@ void ProcessOutputFile(char *OutputFile, int mem)
 
 		/*3*/
 		if (read_p_line) {        /*3- if data to measure has been found, then proced with the measurements*/
-			strsub(lkk1, lkk, (int)measure[0].s_column1, (int)(strlen(measure[0].search) + 2));
-			StripSpaces(lkk1);
+			strsub(lkk1, lkk, (int)measure[0].s_column1, (int)strlen(measure[0].search) + 0);
+			//-- StripSpaces(lkk1); /*necessary when we want to find '******    alter processing listing'*/
+			switch(spice) {                                          /*                                                                */
+				case 1: /*Eldo*/                                 /*                                                                */
+					if (strpos2(lkk, ".ALTER @", 1))         /*To overcome Eldo case where the search line in measure[0].search*/
+						strcpy(lkk1, measure[0].search); /*is different from the line having the ALTER information, copy   */
+					break;                                   /*to lkk1, so that is passes the comparison below as with HSPICE  */
+				case 2: /*HSPICE*/                               /*                                                                */
+				case 3: /*LTspice*/                              /*                                                                */
+				case 4: /*Spectre*/                              /*                                                                */
+				case 50: /*Qucs*/                                /*                                                                */
+				case 100: /*general*/                            /*                                                                */
+					break;                                   /*                                                                */
+				default:                                         /*                                                                */
+					printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);                      /*                                                                */
+			}                                                        /*                                                                */
 			if (!strcmp(lkk1, measure[0].search) && (int)strlen(lkk1)>10) { /*Was ALTER simulation found?*/
 				if (mem&1)
 					WriteToMem(j);
-				if (mem&2)
-					WriteToFile(j, lprevious, first, &stats, &fSummary);
+				if (mem&2) {
+					switch(spice) {
+						case 1: /*Eldo*/
+							WriteToFile(j, lkk, first, &stats, &fSummary);
+							break;
+						case 2: /*HSPICE*/
+							WriteToFile(j, lprevious, first, &stats, &fSummary);
+							break;
+						case 3: /*LTspice*/
+						case 4: /*Spectre*/
+						case 50: /*Qucs*/
+						case 100: /*general*/
+							WriteToFile(j, lprevious, first, &stats, &fSummary);
+							break;
+						default:
+							printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Something unexpected has happened!\n");
+							exit(EXIT_FAILURE);
+					}
+				}
 				i++;
 				first = FALSE;
 				for (l = 1; l <= (MAXMEAS-1); l++) /*After using the measured information,*/
 					*measure[l].data = '\0';   /*delete all data that has been stored */
-				StripSpaces(lprevious);
-				strcpy(measure[0].data, lprevious);
+				switch(spice) {
+					case 1: /*Eldo*/
+						StripSpaces(lkk);
+						strcpy(measure[0].data, lkk);
+						break;
+					case 2: /*HSPICE*/
+						StripSpaces(lprevious);
+						strcpy(measure[0].data, lprevious);
+						break;
+					case 3: /*LTspice*/
+					case 4: /*Spectre*/
+					case 50: /*Qucs*/
+					case 100: /*general*/
+						strcpy(measure[0].data, "");
+						break;
+					default:
+						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Something unexpected has happened!\n");
+						exit(EXIT_FAILURE);
+				}
 			}
 
 			for (k = 1; k <= j; k++) {      /*search for the remaining ones*/
@@ -1276,7 +1579,62 @@ void ProcessOutputFile(char *OutputFile, int mem)
 					if (IsItATransistor(measure[k].search, 1, k, '\0')) { /*1: Is the current variable a transistor?*/
 						for (a = 1; a <= b; a++) {                    /*2: yes, it is a transistor*/
 							if (strpos2(lelement, measure[k].search, 1) == index[a - 1]) {
-								strsub(measure[k].data, lkk, (int)index[a - 1], (int)(index[a] - index[a - 1]));
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+										strsub(measure[k].data, lkk, (int)index[a - 1], (int)(index[a] - index[a - 1]));
+										break;
+									case 4: /*Spectre*/
+										strsub(measure[k].data, lkk, (int)index[a - 1]+4, 15);
+										i=strpos2(measure[k].data, " ", 1);
+										measure[k].data[i-1]='\0';
+										switch (measure[k].data[i]) { /*finds multiple: t,g,x,k, m,u,n,p,f,a,z*/
+											case 't':   /*T: tera*/
+												strcat(measure[k].data, "e+12");
+												break;
+											case 'g':   /*G: giga*/
+												strcat(measure[k].data, "e+09");
+												break;
+											case 'x':   /*M: mega*/
+												strcat(measure[k].data, "e+06");
+												break;
+											case 'k':   /*k: kilo*/
+												strcat(measure[k].data, "e+03");
+												break;
+											case 'm':   /*m: mill*/
+												strcat(measure[k].data, "e-03");
+												break;
+											case 'u':   /*u: micro*/
+												strcat(measure[k].data, "e-06");
+												break;
+											case 'n':   /*n: nano*/
+												strcat(measure[k].data, "e-09");
+												break;
+											case 'p':   /*p: pico*/
+												strcat(measure[k].data, "e-12");
+												break;
+											case 'f':   /*f: femto*/
+												strcat(measure[k].data, "e-15");
+												break;
+											case 'a':   /*a: atto*/
+												strcat(measure[k].data, "e-18");
+												break;
+											case 'z':   /*z: zepto*/
+												strcat(measure[k].data, "e-21");
+												break;
+										}
+										break;
+									case 50: /*Qucs*/
+										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Qucs not supported\n");
+										exit(EXIT_FAILURE);
+									case 100: /*general*/
+										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- GENERAL not supported\n");
+										exit(EXIT_FAILURE);
+									default:
+										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
 							}
 						}
 					} else {                                              /*3: no, it is not a transistor*/
@@ -1304,7 +1662,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 		/*3*/
 
 		/*4*/
-		for (k = 0; k <= j; k++) { /*4-*/
+		for (k = 0; k <= j; k++) {
 			if (measure_p_line[k] == 0)       /*replace all '0' by '255', meaning that has already been read*/
 				measure_p_line[k] = 255;
 			if (measure_p_line[k] != 255)
@@ -1344,6 +1702,6 @@ void MeasureFromLIS(char *ConfigFile, char *OutputFile)
 	int k;
 
 	k=ReadDataFromConfigFile(ConfigFile, OutputFile);
-	if (k)/*if measurements do do exist*/
+	if (k)/*if measurements to do exist*/
 		ProcessOutputFile(OutputFile, 3);
 } /*MeasureFromLIS*/

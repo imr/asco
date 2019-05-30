@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Joao Ramos
+ * Copyright (C) 2005-2010 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -26,7 +26,7 @@
 
 
 
-/* 
+/*
  * Receives a SPICE line and extract the device value. Currently only
  * R/L/C devices are supported and in a very simply input format as
  * the device value is always the last paramenter in the SPICE line,
@@ -60,6 +60,23 @@ int ExtractDeviceValuePosition(char *line, int DataSource)
 	j = k;
 	while (line[j - 1] != ' ')
 		j--;
+
+	switch(spice) {
+		case 1: /*Eldo*/
+		case 2: /*HSPICE*/
+		case 3: /*LTspice*/
+			break;
+		case 4: /*Spectre*/
+			j=j+2;
+			break;
+		case 50: /*Qucs*/
+			break;
+		case 100: /*general*/
+			break;
+		default:
+			printf("rfmodule.c - ExtractDeviceValuePosition -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
 
 	strsub(laux, line, j+1, k-j+1);
 
@@ -121,6 +138,10 @@ void ReplaceSymbolRF(char *ret, double y_value)
 
 
 
+
+
+
+
 /* 
  * receives a SPICE line
  *      optimize=0 : we are initializing, just replace R/L/C devices
@@ -145,6 +166,41 @@ int RFModule(char *line, int optimize, FILE* fout)
 	strcpy(laux, line);
 	Str2Lower(laux);
 	if (!optimize) { /* we are initializing, just replace R/L/C devices */
+
+
+		/*Spectre lines can start with any letter, mimic SPICE rules for code compatibility*/
+		switch(spice) {
+			case 1: /*Eldo*/
+			case 2: /*HSPICE*/
+			case 3: /*LTspice*/
+				break;
+			case 4: /*Spectre*/
+				if (!(k=inlinestrpos(line))) /* if no in-line comments exist */
+					return 0;            /* return '0' because it does not has parasitics */
+				i=strpos2(line, ")", 1);
+				if (i==0)
+					return 0;
+				ReadSubKey(laux2, line, &i, ' ', ' ', 0);
+				if (!strcmp(laux2, "resistor")) {
+					laux[0]='r';
+				}
+				if (!strcmp(laux2, "inductor")) {
+					laux[0]='l';
+				}
+				if (!strcmp(laux2, "capacitor")) {
+					laux[0]='c';
+				}
+				break;
+			case 50: /*Qucs*/
+				break;
+			case 100: /*general*/
+				break;
+			default:
+				printf("rfmodule.c - Step0 -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
+		}
+
+
 		switch (laux[0]) {
 /* ---------------------------------------------------------- */
 /* ---------------------------------------------------------- */
@@ -159,7 +215,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 				else {
 					sprintf(laux2, "%s%s", "rfmodule", ".cfg"); /* has parasitics */
 					if ((fspice_cfg =fopen(laux2 ,"rt")) == 0) {
-						printf("rfmodule.c - RFModule -- Cannot open config file: %s\n", laux2);
+						printf("rfmodule.c - Step0 -- Cannot open config file: %s\n", laux2);
 						exit(EXIT_FAILURE);
 					}
 
@@ -173,50 +229,50 @@ int RFModule(char *line, int optimize, FILE* fout)
 					sprintf(laux3, "#%s#", laux2);
 					ReadKey(laux2, laux3, fspice_cfg); /* looks for key defining the subcircuit */
 					if (strcmp(laux2, laux3)) {
-						printf("INFO:  rfmodule.c - RFModule -- %s key not found\n", laux2);
+						printf("INFO:  rfmodule.c - Step1 -- %s key not found\n", laux2);
 						exit(EXIT_FAILURE);
 					}
 
 					fgets2(laux2, LONGSTRINGSIZE, fspice_cfg);
 					strsub(laux3, laux2, 1, 7); /* detects 'Device:' */
 					if (strcmp(laux3, "Device:")) {
-						printf("rfmodule.c - RFModule -- Incorrect line format, 'Device:' key is missing: %s\n", laux2);
+						printf("rfmodule.c - Step1 -- Incorrect line format, 'Device:' key is missing: %s\n", laux2);
 						exit(EXIT_FAILURE);
 					} else {
 						strsub(laux3, laux2, 8, (int)strlen(laux2)); /* detects device type:'resitor', 'inductor' and 'capacitor' */
 						switch (laux3[0]) {
 							case 'r': /* resistor */
 								if (strcmp(laux3, "resitor")) {
-									printf("rfmodule.c - RFModule -- Incorrect line format, 'resistor' key is missing: %s\n", laux2);
+									printf("rfmodule.c - Step1 -- Incorrect line format, 'resistor' key is missing: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								if (laux[0]!='r') {
-									printf("rfmodule.c - RFModule -- Line is not a resistor: %s\n", line);
+									printf("rfmodule.c - Step1 -- Line is not a resistor: %s\n", line);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							case 'i': /* inductor */
 								if (strcmp(laux3, "inductor")) {
-									printf("rfmodule.c - RFModule -- Incorrect line format, 'inductor' key is missing: %s\n", laux2);
+									printf("rfmodule.c - Step1 -- Incorrect line format, 'inductor' key is missing: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								if (laux[0]!='l') {
-									printf("rfmodule.c - RFModule -- Line is not a inductor: %s\n", line);
+									printf("rfmodule.c - Step1 -- Line is not a inductor: %s\n", line);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							case 'c': /* capacitor */
 								if (strcmp(laux3, "capacitor")) {
-									printf("rfmodule.c - RFModule -- Incorrect line format, 'capacitor' key is missing: %s\n", laux2);
+									printf("rfmodule.c - Step1 -- Incorrect line format, 'capacitor' key is missing: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								if (laux[0]!='c') {
-									printf("rfmodule.c - RFModule -- Line is not a capacitor: %s\n", line);
+									printf("rfmodule.c - Step1 -- Line is not a capacitor: %s\n", line);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							default:
-								printf("rfmodule.c - RFModule -- Something unexpected has happened!\n");
+								printf("rfmodule.c - Step1 -- Something unexpected has happened!\n");
 								exit(EXIT_FAILURE);
 						}
 					}
@@ -226,7 +282,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 					if (strcmp(laux3, "Terminal:")) {
 						k=inlinestrpos(line);
 						ReadSubKey(laux2, line, &k, '#', '_', 0);
-						printf("rfmodule.c - RFModule -- Incorrect format: 'Terminal' key missing in rfmodule.cfg. Subcircuit definition '%s'\n", laux2);
+						printf("rfmodule.c - Step1 -- Incorrect format: 'Terminal' key missing in rfmodule.cfg. Subcircuit definition '%s'\n", laux2);
 						exit(EXIT_FAILURE);
 					}
 
@@ -238,7 +294,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 					sprintf(laux3, "#%s#", laux2);
 					ReadKey(laux2, laux3, fspice_cfg); /* looks for device characterization values group */
 					if (strcmp(laux2, laux3)) {
-						printf("INFO:  rfmodule.c - RFModule -- '%s' device characterization key in '%s' not found in rfmodule.cfg\n", laux3, line);
+						printf("INFO:  rfmodule.c - Step2 -- '%s' device characterization key in '%s' not found in rfmodule.cfg\n", laux3, line);
 						exit(EXIT_FAILURE);
 					}
 
@@ -254,7 +310,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 						if ( strcmp(rf[i].subckt, laux2) || strcmp(rf[i].subkey, laux3) ) {
 							i++;
 							if (i>MAXRFSUBCKT) {
-								printf("rfmodule.c - RFModule -- Maximum limit of %d subcircuits reached. Increase MAXRFSUBCKT in rfmodule.h\n", MAXRFSUBCKT);
+								printf("rfmodule.c - Step3 -- Maximum limit of %d subcircuits reached. Increase MAXRFSUBCKT in rfmodule.h\n", MAXRFSUBCKT);
 								exit(EXIT_FAILURE);
 							}
 						} else
@@ -279,7 +335,25 @@ int RFModule(char *line, int optimize, FILE* fout)
 					/*Step4 */
 					if (j<MAXRFSUBCKT) { /* if a new subcircuit was found */
 					/*Step4.1: write the ".subckt" header line */
-						fprintf(fout, ".subckt %s.sub ", rf[i].subckt);
+
+						switch(spice) {
+							case 1: /*Eldo*/
+							case 2: /*HSPICE*/
+							case 3: /*LTspice*/
+								fprintf(fout, ".subckt %s.sub ", rf[i].subckt);
+								break;
+							case 4: /*Spectre*/
+								fprintf(fout, "subckt %s_sub ", rf[i].subckt);
+								break;
+							case 50: /*Qucs*/
+								break;
+							case 100: /*general*/
+								break;
+							default:
+								printf("rfmodule.c - Step4.1 -- Something unexpected has happened!\n");
+								exit(EXIT_FAILURE);
+						}
+
 						sprintf(laux3, "#%s#", rf[i].subckt);
 						fseek(fspice_cfg, 0, SEEK_SET);
 						ReadKey(laux2, laux3, fspice_cfg); /* looks for key defining the subcircuit */
@@ -287,6 +361,24 @@ int RFModule(char *line, int optimize, FILE* fout)
 						fgets2(laux2, LONGSTRINGSIZE, fspice_cfg); /* Terminal: */
 						strsub(laux3, laux2, 10, (int)strlen(laux2)); /* copies the terminals    */
 						fprintf(fout, "%s ", laux3);                  /* and prints them to file */
+
+						switch(spice) {
+							case 1: /*Eldo*/
+							case 2: /*HSPICE*/
+							case 3: /*LTspice*/
+								break;
+							case 4: /*Spectre*/
+								fseek(fout, -1, SEEK_CUR);
+								fprintf(fout, "\nparameters ");
+								break;
+							case 50: /*Qucs*/
+								break;
+							case 100: /*general*/
+								break;
+							default:
+								printf("rfmodule.c - Step4.1 -- Something unexpected has happened!\n");
+								exit(EXIT_FAILURE);
+						}
 
 						while ((laux2[0] != '#') && (line[0] != '\0') && (!feof(fspice_cfg))) {
 							fgets2(laux2, LONGSTRINGSIZE, fspice_cfg);
@@ -314,18 +406,55 @@ int RFModule(char *line, int optimize, FILE* fout)
 							if (laux2[0] != '#') {
 								if (laux2[0] != '*')
 									if (laux2[0] != '\0')
-										fprintf(fout, "%s\n", laux2);
+										fprintf(fout, "%s\n", laux2); /*writes each line of the subcircuit*/
 							} else
-								fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+										fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+										break;
+									case 4: /*Spectre*/
+										fprintf(fout, "ends %s_sub\n", rf[i].subckt);
+										break;
+									case 50: /*Qucs*/
+										break;
+									case 100: /*general*/
+										break;
+									default:
+										printf("rfmodule.c - Step4.2 -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
+
 						}
 					}
 
 
 					/**/
 					/*Step5: Write the "X... " line to <hostname>.tmp */
-					j=ExtractDeviceValuePosition(line, 1);
-					strsub(laux2, line, 1, j);
-					sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
+					switch(spice) {
+						case 1: /*Eldo*/
+						case 2: /*HSPICE*/
+						case 3: /*LTspice*/
+							j=ExtractDeviceValuePosition(line, 1);
+							strsub(laux2, line, 1, j);
+							sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
+							break;
+						case 4: /*Spectre*/
+							j=strpos2(line, ")", 1);
+							strsub(laux2, line, 1, j);
+							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
+							break;
+						case 50: /*Qucs*/
+							break;
+						case 100: /*general*/
+							break;
+						default:
+							printf("rfmodule.c - Step5 -- Something unexpected has happened!\n");
+							exit(EXIT_FAILURE);
+					}
+
 					fprintf(fout, "%s", laux3);
 
 					sprintf(laux3, "#%s#", rf[i].subckt);
@@ -367,14 +496,32 @@ int RFModule(char *line, int optimize, FILE* fout)
 								case 100: /*general*/
 									break;
 								default:
-									printf("rfmodule.c - Step4 -- Something unexpected has happened!\n");
+									printf("rfmodule.c - Step5 -- Something unexpected has happened!\n");
 									exit(EXIT_FAILURE);
 							}
 
 							if (ll==0) { /* stores the value from SPICE input file: <inputfile>.* */
 								j=ExtractDeviceValuePosition(line, 1);
 								k=inlinestrpos(line);
-								strsub(laux2, line, j, k-j);
+
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+										strsub(laux2, line, j, k-j);
+										break;
+									case 4: /*Spectre*/
+										strsub(laux2, line, j+1, k-j-1);
+										break;
+									case 50: /*Qucs*/
+										break;
+									case 100: /*general*/
+										break;
+									default:
+										printf("rfmodule.c - Step5 -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
+
 								StripSpaces(laux2);
 								if (laux2[0]=='#') /*Only replace symbol if there is one to replace*/
 									ReplaceSymbol(laux2, 0);
@@ -413,34 +560,33 @@ int RFModule(char *line, int optimize, FILE* fout)
 							case 'r': /* resistor */
 							case 'R': /* resistor */
 								if (x0_value < 1e-6) { /*Just to avoid wrong data insertion*/
-									printf("rfmodule.c - RFModule -- Small resistor value (1uOhm) found in rfmodule.cfg: %s\n", laux2);
+									printf("rfmodule.c - Step6 -- Small resistor value (1uOhm) found in rfmodule.cfg: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							case 'l': /* inductor */
 							case 'L': /* inductor */
 								if (x0_value > 1e-6) { /*It is not likely in IC design that an inductor be larger than 1uH*/
-									printf("rfmodule.c - RFModule -- Large inductor value (>1uH) found in rfmodule.cfg: %s\n", laux2);
+									printf("rfmodule.c - Step6 -- Large inductor value (>1uH) found in rfmodule.cfg: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							case 'c': /* capacitor */
 							case 'C': /* capacitor */
 								if (x0_value > 100e-6) { /*It is not likely in IC design that a capacitor be larger than 100uF*/
-									printf("rfmodule.c - RFModule -- Large capacitor value (>100uF) found in rfmodule.cfg: %s\n", laux2);
+									printf("rfmodule.c - Step6 -- Large capacitor value (>100uF) found in rfmodule.cfg: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
 								break;
 							default:
 								printf("rfmodule.c - Step6 -- Something unexpected has happened!\n");
 								exit(EXIT_FAILURE);
-								break;
 						}
 						strcpy(rf[i].line[j], laux2);
 						j++;
 						fgets2(laux2, LONGSTRINGSIZE, fspice_cfg);
 						if (j > MAXTABLELINES) {
-							printf("rfmodule.c - RFModule -- Maximum number of %d lines in rfmodule.cfg exceeded. Increase MAXTABLELINES in rfmodule.h\n", MAXTABLELINES);
+							printf("rfmodule.c - Step6 -- Maximum number of %d lines in rfmodule.cfg exceeded. Increase MAXTABLELINES in rfmodule.h\n", MAXTABLELINES);
 							exit(EXIT_FAILURE);
 						}
 					}
@@ -554,7 +700,25 @@ int RFModule(char *line, int optimize, FILE* fout)
 					/*Step4 */
 					if (j<MAXRFSUBCKT) { /* if a new subcircuit was found */
 					/*Step4.1: write the ".subckt" header line */
-						fprintf(fout, ".subckt %s.sub ", rf[i].subckt);
+
+						switch(spice) {
+							case 1: /*Eldo*/
+							case 2: /*HSPICE*/
+							case 3: /*LTspice*/
+								fprintf(fout, ".subckt %s.sub ", rf[i].subckt);
+								break;
+							case 4: /*Spectre*/
+								fprintf(fout, "subckt %s_sub ", rf[i].subckt);
+								break;
+							case 50: /*Qucs*/
+								break;
+							case 100: /*general*/
+								break;
+							default:
+								printf("rfmodule.c - Step4.1 -- Something unexpected has happened!\n");
+								exit(EXIT_FAILURE);
+						}
+
 						sprintf(laux3, "#%s#", rf[i].subckt);
 						fseek(fspice_cfg, 0, SEEK_SET);
 						ReadKey(laux2, laux3, fspice_cfg); /* looks for key defining the subcircuit */
@@ -562,6 +726,24 @@ int RFModule(char *line, int optimize, FILE* fout)
 						fgets2(laux2, LONGSTRINGSIZE, fspice_cfg); /* Terminal: */
 						strsub(laux3, laux2, 10, (int)strlen(laux2)); /* copies the terminals    */
 						fprintf(fout, "%s ", laux3);                  /* and prints them to file */
+
+						switch(spice) {
+							case 1: /*Eldo*/
+							case 2: /*HSPICE*/
+							case 3: /*LTspice*/
+								break;
+							case 4: /*Spectre*/
+								fseek(fout, -1, SEEK_CUR);
+								fprintf(fout, "\nparameters ");
+								break;
+							case 50: /*Qucs*/
+								break;
+							case 100: /*general*/
+								break;
+							default:
+								printf("rfmodule.c - Step4.1 -- Something unexpected has happened!\n");
+								exit(EXIT_FAILURE);
+						}
 
 						while ((laux2[0] != '#') && (line[0] != '\0') && (!feof(fspice_cfg))) {
 							fgets2(laux2, LONGSTRINGSIZE, fspice_cfg);
@@ -589,18 +771,55 @@ int RFModule(char *line, int optimize, FILE* fout)
 							if (laux2[0] != '#') {
 								if (laux2[0] != '*')
 									if (laux2[0] != '\0')
-										fprintf(fout, "%s\n", laux2);
+										fprintf(fout, "%s\n", laux2); /*writes each line of the subcircuit*/
 							} else
-								fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+										fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+										break;
+									case 4: /*Spectre*/
+										fprintf(fout, "ends %s_sub\n", rf[i].subckt);
+										break;
+									case 50: /*Qucs*/
+										break;
+									case 100: /*general*/
+										break;
+									default:
+										printf("rfmodule.c - Step4.2 -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
+
 						}
 					}
 
 
 					/**/
 					/*Step5: Write the "X... " line to <hostname>.tmp */
-					j=ExtractDeviceValuePosition(line, 1);
-					strsub(laux2, line, 1, j);
-					sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
+					switch(spice) {
+						case 1: /*Eldo*/
+						case 2: /*HSPICE*/
+						case 3: /*LTspice*/
+							j=ExtractDeviceValuePosition(line, 1);
+							strsub(laux2, line, 1, j);
+							sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
+							break;
+						case 4: /*Spectre*/
+							j=strpos2(line, ")", 1);
+							strsub(laux2, line, 1, j);
+							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
+							break;
+						case 50: /*Qucs*/
+							break;
+						case 100: /*general*/
+							break;
+						default:
+							printf("rfmodule.c - Step5 -- Something unexpected has happened!\n");
+							exit(EXIT_FAILURE);
+					}
+
 					/*fprintf(fout, "%s", laux3);*/
 
 					sprintf(laux3, "#%s#", rf[i].subckt);
@@ -624,7 +843,25 @@ int RFModule(char *line, int optimize, FILE* fout)
 							if (ll==0) { /* stores the value from SPICE input file: <inputfile>.* */
 								j=ExtractDeviceValuePosition(line, 1);
 								k=inlinestrpos(line);
-								strsub(laux2, line, j, k-j);
+
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+										strsub(laux2, line, j, k-j);
+										break;
+									case 4: /*Spectre*/
+										strsub(laux2, line, j+1, k-j-1);
+										break;
+									case 50: /*Qucs*/
+										break;
+									case 100: /*general*/
+										break;
+									default:
+										printf("rfmodule.c - Step5 -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
+
 								StripSpaces(laux2);
 								/*fprintf(fout, " %s=%s", laux3, laux2);*/
 								laux2[0]='\0';
@@ -682,7 +919,6 @@ int RFModule(char *line, int optimize, FILE* fout)
 							default:
 								printf("rfmodule.c - Step6 -- Something unexpected has happened!\n");
 								exit(EXIT_FAILURE);
-								break;
 						}
 						strcpy(rf[i].line[j], laux2);
 						j++;
@@ -704,7 +940,6 @@ int RFModule(char *line, int optimize, FILE* fout)
 /* ---------------------------------------------------------- */
 			default:
 				return 0; /* return '0' because the device is not supported */
-				break;
 		}
 	} else {         /* we are optimizing, replace subcircuit devices (X... ) */
 
@@ -726,7 +961,25 @@ int RFModule(char *line, int optimize, FILE* fout)
 			/* From this momment onwards, both cases can be treated by the same subroutine
 			  to fill the device parasitics from the table  */
 
-			k = strpos2(laux, ".sub ", 1); /* Due to character case variation, it must be laux and not line */
+			//k = strpos2(laux, ".sub ", 1); /* Due to character case variation, it must be laux and not line */
+			switch(spice) {
+				case 1: /*Eldo*/
+				case 2: /*HSPICE*/
+				case 3: /*LTspice*/
+					k = strpos2(laux, ".sub ", 1);
+					break;
+				case 4: /*Spectre*/
+					k = strpos2(laux, "_sub ", 1);
+					break;
+				case 50: /*Qucs*/
+					break;
+				case 100: /*general*/
+					break;
+				default:
+					printf("rfmodule.c - Step8 -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
+			}
+
 			j=k;
 			while (line[j - 1] != ' ')
 				j--;
@@ -744,12 +997,30 @@ int RFModule(char *line, int optimize, FILE* fout)
 			while ( strcmp(rf[i].subckt, laux2) || strcmp(rf[i].subkey, laux3) ) {
 				i++;
 				if (i>MAXRFSUBCKT) {
-					printf("rfmodule.c - RFModule -- Not found in rfmodule.cfg: %s and/or %s from line '%s'\n", laux2, laux3, line);
+					printf("rfmodule.c - Step8 -- Not found in rfmodule.cfg: %s and/or %s from line '%s'\n", laux2, laux3, line);
 					exit(EXIT_FAILURE);
 				}
 			}
 
-			k = strpos2(laux, ".sub ", 1); /* Due to character case variation, it must be laux and not line */
+			//k = strpos2(laux, ".sub ", 1); /* Due to character case variation, it must be laux and not line */
+			switch(spice) {
+				case 1: /*Eldo*/
+				case 2: /*HSPICE*/
+				case 3: /*LTspice*/
+					k = strpos2(laux, ".sub ", 1);
+					break;
+				case 4: /*Spectre*/
+					k = strpos2(laux, "_sub ", 1);
+					break;
+				case 50: /*Qucs*/
+					break;
+				case 100: /*general*/
+					break;
+				default:
+					printf("rfmodule.c - Step8 -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
+			}
+
 			ReadSubKey(x_string, line, &k, ' ', '=', 5);
 			StripSpaces(x_string);
 			j=0;
@@ -757,7 +1028,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 				ll=strpos2(rf[i].line[j], x_string, 1);
 				strsub(laux3, rf[i].line[j], ll, (int)strlen(x_string));
 				if (strcmp(x_string, laux3)) {
-					printf("rfmodule.c - RFModule -- Incorrect character case: '%s' is different than '%s' in rfmodule.cfg\n", line, rf[i].line[j]);
+					printf("rfmodule.c - Step8 -- Incorrect character case: '%s' is different than '%s' in rfmodule.cfg\n", line, rf[i].line[j]);
 					exit(EXIT_FAILURE);
 				}
 				j++;
@@ -777,55 +1048,57 @@ int RFModule(char *line, int optimize, FILE* fout)
 
 			/**/
 			/*Step9: */
-			while (strpos2(line, "=_RF_ ", 1)) { /* while there is values to replace... */
 			/*Step9.1: X_VALUES for linear interpolation -- Get the correct table lines from the rfmodule.cfg */
-				prev=0; /*number '0' is used for posterior value validation*/
+			prev=0; /*number '0' is used for posterior value validation*/
+			k=1;
+			ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
+			x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
+			while (x0_value < x_value) {
+				prev++;
+				if (prev>= MAXTABLELINES) {
+					printf("rfmodule.c - Step9.1 -- Value (%s) higher than the last value in table: %s\n", x_string, line);
+					exit(EXIT_FAILURE);
+				}
 				k=1;
 				ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
 				x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
-				while (x0_value < x_value) {
+			}
+			if (!fcmp(x0_value, x_value)) /* Special case when (x0_value = x_value), meaning */
+				prev++;              /* that it is equal to one of table extremes       */
+			if (prev==0) { /* The following code exist due to numerical error defining how close x0_value == x_value */
+				if (strpos2(line, x_string, 1)) {
 					prev++;
-					if (prev>= MAXTABLELINES) {
-						printf("rfmodule.c - RFModule -- Value (%s) higher than the last value in table: %s\n", x_string, line);
-						exit(EXIT_FAILURE);
-					}
-					k=1;
-					ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
-					x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
+					x_value=x0_value;
 				}
-				if (fcmp(x0_value, x_value)) /* Special case when (x0_value = x_value), meaning */
-					prev++;              /* that it is equal to one of table extremes       */
-				/* if (prev==0) {*/ /* The following code exist due to numerical error defining how close x0_value == x_value */
-				/*	if (strpos2(line, x_string, 1)) {
-						prev++;
-						x_value=x0_value;
-					}
-				} */
-				if (prev==0) { /*validation*/
-					printf("rfmodule.c - RFModule -- Value (%s) is lower than the first value in table: %s\n", x_string, line);
-					exit(EXIT_FAILURE);
-				} else {
-					prev--;
-					k=1;
-					ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
-					x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
-				}
+			}
+			if (prev==0) { /*validation*/
+				printf("rfmodule.c - Step9.1 -- Value (%s) is lower than the first value in table: %s\n", x_string, line);
+				exit(EXIT_FAILURE);
+			} else {
+				prev--;
+				k=1;
+				ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
+				x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
+			}
 
-				next=prev;
+			next=prev;
+			k=1;
+			ReadSubKey(x1_string, rf[i].line[next], &k, '=', ' ', 5);
+			x1_value=asc2real(x1_string, 1, (int)strlen(x1_string));
+			while (x_value > x1_value) {
+				next++;
+				if (next>= MAXTABLELINES) {
+					printf("rfmodule.c - Step9.1 -- Device value (%s) outside table boundaries: %s\n", x_string, line);
+					exit(EXIT_FAILURE);
+				}
 				k=1;
 				ReadSubKey(x1_string, rf[i].line[next], &k, '=', ' ', 5);
 				x1_value=asc2real(x1_string, 1, (int)strlen(x1_string));
-				while (x_value > x1_value) {
-					next++;
-					if (next>= MAXTABLELINES) {
-						printf("rfmodule.c - RFModule -- Device value (%s) outside table boundaries: %s\n", x_string, line);
-						exit(EXIT_FAILURE);
-					}
-					k=1;
-					ReadSubKey(x1_string, rf[i].line[next], &k, '=', ' ', 5);
-					x1_value=asc2real(x1_string, 1, (int)strlen(x1_string));
-				}
+			}
+			/*'prev' and 'next' index are known at this point*/
 
+
+			while (strpos2(line, "=_RF_ ", 1)) { /* while there is values to replace... */
 			/*Step9.2: Y_VALUES for linear interpolation -- */
 				j = strpos2(line, "=_RF_ ", 1);
 				while (line[j - 1] != ' ')
@@ -834,32 +1107,36 @@ int RFModule(char *line, int optimize, FILE* fout)
 				sprintf(laux3, " %s=", laux2);
 				j=strpos2(rf[i].line[prev], laux3, 1);
 				if (j==0) {
-					printf("rfmodule.c - RFModule -- 1 Incorrect format: '%s' from line '%s' is not found in rfmodule.cfg line '%s'\n", laux3, line, rf[i].line[prev]);
+					printf("rfmodule.c - Step9.2 -- 1 Incorrect format: '%s' from line '%s' is not found in rfmodule.cfg line '%s'\n", laux3, line, rf[i].line[prev]);
 					exit(EXIT_FAILURE);
 				}
 				ReadSubKey(y0_string, rf[i].line[prev], &j, '=', ' ', 5);
 				y0_value=asc2real(y0_string, 1, (int)strlen(y0_string));
 				j=strpos2(rf[i].line[next], laux3, 1);
 				if (j==0) {
-					printf("rfmodule.c - RFModule -- 2 Incorrect format: '%s' from line '%s' is not found in rfmodule.cfg line '%s'\n", laux3, line, rf[i].line[next]);
+					printf("rfmodule.c - Step9.2 -- 2 Incorrect format: '%s' from line '%s' is not found in rfmodule.cfg line '%s'\n", laux3, line, rf[i].line[next]);
 					exit(EXIT_FAILURE);
 				}
 				ReadSubKey(y1_string, rf[i].line[next], &j, '=', ' ', 5);
 				y1_value=asc2real(y1_string, 1, (int)strlen(y1_string));
 
 			/*Step9.3: Linar Interpolation */
-				if (fcmp(x0_value, x_value))
+				if (!fcmp(x0_value, x_value))
 					y_value=y0_value;
 				else
 					y_value= y0_value + ( (x_value-x0_value)/(x1_value-x0_value) )*(y1_value-y0_value);
 				sprintf(y_string, "%E", y_value);
 				if (!strcasecmp(y_string, "nan")) {
-					printf("rfmodule.c - RFModule -- Interpolated value result in 'y_string' is NAN.\n");
+					printf("rfmodule.c - Step9.3 -- Interpolated value result in 'y_string' is NAN.\n");
 					exit(EXIT_FAILURE);
 				}
 
 				ReplaceSymbolRF(line, y_value);
 			}
+
+
+			/**/
+			/*Step10: */
 			fprintf(fout, "%s\n", line);
 			return 1;
 		}

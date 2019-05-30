@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
 			ii=0;
 			ccode=0; /*'ccode' behaves like a boolean variable*/
 			while (parameters[ii].format != 0) {
-				if ( fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
-					if (fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
+				if ( !fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
+					if (!fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
 						printf("asco.c - Value is zero when using DE in emulated local mode.");
 						exit(EXIT_FAILURE);
 					}

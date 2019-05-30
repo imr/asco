@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Joao Ramos
+ * Copyright (C) 2004-2010 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -32,6 +32,10 @@
 #include "errfunc.h"
 #include "auxfunc_measurefromlis.h"
 #include "rfmodule.h"
+
+
+
+
 
 
 
@@ -110,7 +114,7 @@ double CostFunction()
 				if (measurements[i].measured_value <= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
+					if (!fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -127,7 +131,7 @@ double CostFunction()
 				if (measurements[i].measured_value >= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
+					if (!fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -141,7 +145,7 @@ double CostFunction()
 
 			case 6: /*EQ                                            ===> constraint (EQ)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
-				if (fcmp(measurements[i].constraint_value, 0)) {                         /*special case when constraint==0*/
+				if (!fcmp(measurements[i].constraint_value, 0)) {                         /*special case when constraint==0*/
 					if ( (measurements[i].measured_value >= (-tolerance)) &&
 					     (measurements[i].measured_value <= (+tolerance)) )
 						cost = cost;                                             /*no penalty*/
@@ -281,6 +285,7 @@ void LogtoFile(double cost)
 /*
  *
  */
+ #ifdef ASCO
 void WriteToMem(int num_measures)
 {
 	int i, ii, j;
@@ -369,7 +374,7 @@ void WriteToMem(int num_measures)
 
 			measurements[j].measured_value=asc2real(laux, 1, (int)strlen(laux)); /*4- convert it to double                                           */
 
-			if (fcmp(measurements[j].measured_value, 0)) {                       /*5- check NaN and other text strings                               */
+			if (!fcmp(measurements[j].measured_value, 0)) {                      /*5- check NaN and other text strings                               */
 				if ((laux[0] < 43) || (laux[0] > 57) ) /*if its text*/
 					if (measurements[j].objective_constraint == 4) /*4=LE*/
 						measurements[j].measured_value=+1e+30; /*so that a large cost is later assigned*/
@@ -395,6 +400,7 @@ void WriteToMem(int num_measures)
 	}
 /*----------------------------------------------------------------------------*/
 }
+#endif
 
 
 
@@ -485,10 +491,17 @@ double errfunc(char *filename, double *x)
 		exit(EXIT_FAILURE);
 	}
 
+	/*Step2.1: ".end" not yet found*/
 	fgets2(lkk, LONGSTRINGSIZE, fspice_tmp);       /*read and*/
 	fprintf(fspice_input, "%s\n", lkk); /*write the first line*/
 	while (!P_eof(fspice_tmp)) {
 		fgets2(lkk, LONGSTRINGSIZE, fspice_tmp);
+
+		strcpy(laux, lkk);           /*detect ".end", ".END", ".End", ... */
+		Str2Lower(laux);
+		StripSpaces(laux);           /* avoid spaces after the command ".end" */
+		if (!strcmp(laux, ".end"))
+			break;
 
 		/***** -------------- *********** -------------- *****/
 		/***** -------------- ** BEGIN ** -------------- *****/
@@ -508,8 +521,60 @@ double errfunc(char *filename, double *x)
 		}
 		/***** -------------- **  END  ** -------------- *****/
 		/***** -------------- *********** -------------- *****/
-
 	}
+	switch(spice) {
+		case 1: /*Eldo*/
+			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
+				printf("errfunc.c - Step2.1 -- End not found in %s.cir\n", filename);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 2: /*HSPICE*/
+			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
+				printf("errfunc.c - Step2.1 -- End not found in %s.sp\n", filename);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 3: /*LTspice*/
+			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
+				printf("errfunc.c - Step2.1 -- End not found in %s.net\n", filename);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 4: /*Spectre*/                 /* ".end" does not exist in Spectre syntax */
+			break;
+		case 50: /*Qucs*/                   /* ".end" does not exist in Qucs syntax */
+			break;
+		case 100: /*general*/
+			break;
+		default:
+			printf("errfunc.c - Step2.1 -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+
+
+	/*Step2.3: Add ".end" where required*/
+	switch(spice) {
+		case 1: /*Eldo*/
+			fprintf(fspice_input, "%s\n", ".end");
+			break;
+		case 2: /*HSPICE*/
+			fprintf(fspice_input, "%s\n", ".end");
+			break;
+		case 3: /*LTspice*/
+			fprintf(fspice_input, "%s\n", ".end");
+			break;
+		case 4: /*Spectre*/
+			break;
+		case 50: /*Qucs*/
+			break;
+		case 100: /*general*/
+			break;
+		default:
+			printf("errfunc.c - Step2.3 -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+
 	fclose(fspice_input);
 	fclose(fspice_tmp);
 
@@ -521,7 +586,7 @@ double errfunc(char *filename, double *x)
 	#endif
 	switch(spice) {
 		case 1: /*Eldo*/
-			sprintf(lkk, "nice -n 19 /home/jramos/bin/bin/eldo -noconf -i %s.cir > %s.out", hostname, hostname);
+			sprintf(lkk, "nice -n 19 eldo -noconf -i %s.cir > %s.out", hostname, hostname);
 			break;
 		case 2: /*HSPICE*/
 			#ifndef __MINGW32__
@@ -606,6 +671,7 @@ double errfunc(char *filename, double *x)
 	#else
 	ProcessOutputFile(lkk, 1); /* =>1:mem      */
 	#endif
+
 
 	/**/
 	/*Step5: find cost*/
@@ -707,7 +773,11 @@ strcpy (filename_x, filename);
 					CreateALTERinc(filename_x, lkk, 1); /*execute the 'alter' tool*/
 					fseek(fspice_tmp, 0, SEEK_END); /*properly position the pointer*/
 				} else { /* file 'alter.inc', so use it instead of the 'alter' tool */
+					#ifndef __MINGW32__
 					fseek(fspice_tmp, -5, SEEK_END); /*properly position the pointer*/
+					#else
+					fseek(fspice_tmp, -6, SEEK_END); /*properly position the pointer*/
+					#endif
 					fprintf(fspice_tmp, ".INCLUDE alter.inc\n");  /*write*/
 				}
 				/* fseek(fspice_tmp, 0, SEEK_END); */ /*properly position the pointer*/

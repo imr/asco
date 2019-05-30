@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2006 Joao Ramos
+ * Copyright (C) 1999-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -119,29 +119,22 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 					/*begin*/
 					k = 0;
 					ReadSubKey(data, lkk, &j, '[', ' ', 4);
-					if (*data != '\0')
+					if (*data != '\0') {
 						k++;
-					read_sweep_vars(alter[i - 1].data[0], data);
-					ReadSubKey(data, lkk, &j, ' ', ' ', 0);
-					if (*data != '\0')
-						k++;
-					read_sweep_vars(alter[i - 1].data[1], data);
-					ReadSubKey(data, lkk, &j, ' ', ' ', 0);
-					if (*data != '\0')
-						k++;
-					read_sweep_vars(alter[i - 1].data[2], data);
-					ReadSubKey(data, lkk, &j, ' ', ' ', 0);
-					if (*data != '\0')
-						k++;
-					read_sweep_vars(alter[i - 1].data[3], data);
-					ReadSubKey(data, lkk, &j, ' ', ' ', 0);
-					if (*data != '\0')
-						k++;
-					read_sweep_vars(alter[i - 1].data[4], data);
-					ReadSubKey(data, lkk, &j, ' ', ']', 0);
-					if (*data != '\0')
-						k++;
-					read_sweep_vars(alter[i - 1].data[5], data);
+						read_sweep_vars(alter[i - 1].data[0], data);
+					}
+
+					l=1;
+					while (l<SWEEPVARS) {
+						ReadSubKey(data, lkk, &j, ' ', ' ', 0);
+						if (*data != '\0') {
+							k++;
+							read_sweep_vars(alter[i - 1].data[l], data);
+						} else
+							break;
+						l++;
+					}
+
 					sweep[ptr - 1] = k;
 					ptr++;
 					/*end;*/

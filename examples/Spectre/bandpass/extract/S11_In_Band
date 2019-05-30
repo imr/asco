@@ -8,5 +8,5 @@ Note:
 #
 
 # Commands #
-//export real #SYMBOL#=
+export real #SYMBOL# = -20*log10( max(trim(sig=mag((2*V(1))-1), from=960e6, to=1040e6 )) )
 #
