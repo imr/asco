@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Joao Ramos
+ * Copyright (C) 2004-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	/**/
 	/*Step2: Check input arguments*/
 	if (argc != 3) { /* number of arguments */
-		printf("\nUsage : asco -<simulator> <inputfile>\n");
+		printf("\nUsage : asco-test -<simulator> <inputfile>\n");
 		printf("\nExamples:\n");
 		printf("          asco-test -eldo    <inputfile>.cir\n");
 		printf("          asco-test -hspice  <inputfile>.sp\n");
@@ -88,16 +88,17 @@ int main(int argc, char *argv[])
 	strcpy(lkk, argv[2]);
 	ii=strpos2(lkk, "/", 1);
 	#ifdef __MINGW32__
-	if (ii==0) ii=strpos2(lkk, "\\", 1);
+	if (ii==0)
+		ii=strpos2(lkk, "\\", 1);
 	#endif
 	if (ii) {           /*should character '/' exist, files are in a different directory*/
-		ii=strlen(lkk);
+		ii=(int)strlen(lkk);
 		#ifndef __MINGW32__
-		while (lkk[ii--] != 47) {} /* 47="/" */
+		while (lkk[ii] != '/')
 		#else
-		while (lkk[ii] != '/' && lkk[ii] != '\\') {ii--;} /* 47="/" */
+		while (lkk[ii] != '/' && lkk[ii] != '\\')
 		#endif
-		ii++;
+			ii--;
 
 		lkk[ii+1]='\0';
 		chdir(lkk); /*now, change directory                                         */
@@ -178,6 +179,28 @@ int main(int argc, char *argv[])
 	D=0;
 	while (parameters[D].name[0]  != '\0')
 		D++;                                     /*---number of parameters---------------*/
+
+	/* -------------------------------------- */
+	if (1) { /*emulate local search using the global optimizer when (maximum=minimum) and format!=0*/
+		ii=0;
+		while (parameters[ii].format != 0) {
+			if ( fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
+				if (fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
+					printf("asco-test.c - Value is zero when using DE in emulated local mode.");
+					exit(EXIT_FAILURE);
+				}
+				if ((parameters[ii].value) > 0) {
+					parameters[ii].maximum=1.1*parameters[ii].value;
+					parameters[ii].minimum=0.9*parameters[ii].value;
+				} else {
+					parameters[ii].maximum=0.9*parameters[ii].value;
+					parameters[ii].minimum=1.1*parameters[ii].value;
+				}
+			}
+			ii++;
+		}
+	}
+	/* -------------------------------------- */
 
 
 	/**/

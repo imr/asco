@@ -65,7 +65,10 @@ int main(int argc, char *argv[])
 			case 's': /*Spectre*/
 				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
 				break;
-			case 'r': /*rosen*/
+			case 'q': /*Qucs*/
+				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+				break;
+			case 'g': /*general*/
 				printf("postp.c -- Unsupport SPICE simulator: %s\n", argv[1]);
 				break;
 			default:
@@ -77,8 +80,8 @@ int main(int argc, char *argv[])
 
 	/**/
 	/*Step3: */
-	if ((fsweepINI=fopen("sweep.ini","rt")) == 0) {
-		printf("postp.c - Cannot open config file: sweep.ini\n");
+	if ((fsweepINI=fopen(argv[2],"rt")) == 0) {
+		printf("postp.c - Cannot open config file: %s\n", argv[2]);
 		exit(EXIT_FAILURE);
 	}
 	ReadKey(lkk, "CREATE_LJR", fsweepINI);

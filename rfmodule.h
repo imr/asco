@@ -20,8 +20,8 @@
 
 
 
-#define MAXRFSUBCKT 5    /*maximum number or subcircuits having parasitics*/
-#define MAXTABLELINES 10 /*maximum number of tabled data for each one of the subcircuits*/
+#define MAXRFSUBCKT 10   /*maximum number or subcircuits having parasitics*/
+#define MAXTABLELINES 50 /*maximum number of tabled data for each one of the subcircuits*/
 
 
 

@@ -245,7 +245,7 @@ void LogtoFile(double cost)
 		sprintf(laux, "%i", i);                    /* to remove integer added in (*) */
 		ii=(int)strlen(laux);                      /* to remove integer added in (*) */
 		strcpy(laux, measurements[i].meas_symbol); /* to remove integer added in (*) */
-		laux[strlen(laux)-ii]='\0';                /* to remove integer added in (*) */
+		laux[(int)strlen(laux)-ii]='\0';           /* to remove integer added in (*) */
 
 		if (measurements[i].objective_constraint > 3) { /*if it is a constraint: LE=4, GE=5, EQ=6*/
 			if (measurements[i].constraint_met)     /*constraint is met*/
@@ -349,7 +349,7 @@ void WriteToMem(int num_measures)
 				j++;
 			}
 
-			if (strlen(measure[i].data)) {
+			if ((int)strlen(measure[i].data)) {
 				strcpy(laux, measure[i].data);                               /*3- read measurement                                               */
 				StripSpaces(laux);
 			} else {
@@ -358,10 +358,10 @@ void WriteToMem(int num_measures)
 				sprintf(lkk, "%i", i);                    /* to remove integer added in (*) */
 				ii=(int)strlen(lkk);                      /* to remove integer added in (*) */
 				strcpy(lkk, measurements[i].meas_symbol); /* to remove integer added in (*) */
-				lkk[strlen(lkk)-ii]='\0';                 /* to remove integer added in (*) */
+				lkk[(int)strlen(lkk)-ii]='\0';            /* to remove integer added in (*) */
 
-				printf("INFO:  errfunc.c - WriteToMem -- Data not read for measurement in *.cfg: %s\n", lkk);
-				fflush(stdout);
+				printf("errfunc.c - WriteToMem -- Data not read for measurement in *.cfg: %s\n", lkk);
+				fflush(stdout); /*Sometimes the simulation does not converge, and so do not exit*/
 
 				i++;
 				#endif
@@ -497,7 +497,7 @@ double errfunc(char *filename, double *x)
 			ii=1;
 			ReadSubKey(laux, lkk, &ii, '#', '#', 0);
 			if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /* does it contains #<text>#?        */
-				if (strlen(lkk) && (!RFModule(lkk, 1, fspice_input)) )
+				if ((int)strlen(lkk) && (!RFModule(lkk, 1, fspice_input)) )
 					fprintf(fspice_input, "%s\n", lkk);                /*no, write line to <hostname>.*     */
 			} else {                                                           /*yes, replace #<text># in this line */
 				if (!RFModule(lkk, 1, fspice_input)) {
@@ -521,7 +521,7 @@ double errfunc(char *filename, double *x)
 	#endif
 	switch(spice) {
 		case 1: /*Eldo*/
-			sprintf(lkk, "nice -n 19 eldo -noconf -i %s.cir > %s.out", hostname, hostname);
+			sprintf(lkk, "nice -n 19 /home/jramos/bin/bin/eldo -noconf -i %s.cir > %s.out", hostname, hostname);
 			break;
 		case 2: /*HSPICE*/
 			#ifndef __MINGW32__

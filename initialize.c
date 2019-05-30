@@ -37,18 +37,18 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 	double result;
 
 	if (fcmp(inb, ina)) {
-		printf("initialize.c - scaleto -- 'ina' and 'inb' cannot be equal!\n");
+		printf("initialize.c - scaleto -- 'ina' and 'inb' cannot be equal\n");
 		exit(EXIT_FAILURE);
 	}
-	if (fcmp(outb, outa)) {
-		printf("initialize.c - scaleto -- 'outa' and 'outb' cannot be equal!\n");
-		exit(EXIT_FAILURE);
-	}
+	#ifdef DEBUG
+	if (fcmp(outb, outa))
+		printf("INFO:  initialize.c - scaleto -- 'outa' and 'outb' are equal\n");
+	#endif
+
 	switch (format) {
 		case 1: /*LIN_DOUBLE*/
 			result = ( (outb-outa)*value/(inb-ina)  +  (outa*inb - ina*outb)/(inb-ina) );
 			break;
-
 		case 2: /*LIN_INT*/
 			outa=floor(outa); /*Convert to INTEGER, just in case*/
 			outb=ceil(outb);  /*Convert to INTEGER, just in case*/
@@ -56,29 +56,49 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 			result = ( (outb-outa)*value/(inb-ina)  +  (outa*inb - ina*outb)/(inb-ina) );
 			result = rint(result); /*Convert final result to INTEGER*/
 			break;
-
 		case 3: /*LOG_DOUBLE*/
-			printf("initialize.c - scaleto -- LOG_DOUBLE not yet implemented!\n");
-			exit(EXIT_FAILURE);
-
+			if (outa < 0) {
+				printf("initialize.c - scaleto -- 'outa' cannot be negative in LOG_DOUBLE\n");
+				exit(EXIT_FAILURE);
+			}
+			if (outb < 0) {
+				printf("initialize.c - scaleto -- 'outb' cannot be negative in LOG_DOUBLE\n");
+				exit(EXIT_FAILURE);
+			}
+			result = exp(log(outa) + (value-ina)/(inb-ina) * (log(outb)-log(outa)));
+			break;
 		case 4: /*LOG_INT*/
-			printf("initialize.c - scaleto -- LOG_INT not yet implemented!\n");
-			exit(EXIT_FAILURE);
-
+			if (outa < 0) {
+				printf("initialize.c - scaleto -- 'outa' cannot be negative in LOG_INT\n");
+				exit(EXIT_FAILURE);
+			}
+			if (outb < 0) {
+				printf("initialize.c - scaleto -- 'outb' cannot be negative in LOG_INT\n");
+				exit(EXIT_FAILURE);
+			}
+			outa=floor(outa); /*Convert to INTEGER, just in case*/
+			outb=ceil(outb);  /*Convert to INTEGER, just in case*/
+			result = exp(log(outa) + (value-ina)/(inb-ina) * (log(outb)-log(outa)));
+			result = rint(result); /*Convert final result to INTEGER*/
+			break;
 		default:
 			printf("initialize.c - scaleto -- Something unexpected has happened!\n");
 			exit(EXIT_FAILURE);
 	}
 
 	if (result < outa) {
-		printf("initialize.c - scaleto -- Initial value in *.cfg is lower than the minimum value. Double check!\n");
-		#ifndef DEBUG
+		#ifdef DEBUG
+		printf("INFO:  initialize.c - scaleto -- Initial value in *.cfg is lower than the minimum value. Double check!\n");
+		#else
+		printf("initialize.c - scaleto -- Initial value in *.cfg is lower than the minimum value\n");
 		exit(EXIT_FAILURE);
 		#endif
 	}
 	if (result > outb) {
-		printf("initialize.c - scaleto -- Initial value in *.cfg is larger than the maximum value. Double check!\n");
-		#ifndef DEBUG
+		#ifdef DEBUG
+		printf("INFO:  initialize.c - scaleto -- Initial value in *.cfg is larger than the maximum value. Double check!\n");
+		#else
+		printf("initialize.c - scaleto -- Initial value in *.cfg is larger than the maximum value\n");
 		exit(EXIT_FAILURE);
 		#endif
 	}
@@ -109,7 +129,7 @@ void ReplaceSymbol(char *ret, int optimize)
 
 	ii=1;
 	ReadSubKey(laux, ret, &ii, '#', '#', 5);
-	while (ii<=(int)(strlen(ret))) {
+	while (ii<=(int)strlen(ret)) {
 		/*Str2Lower(laux);*/
 		i=0;
 		while (strcmp(parameters[i].symbol, laux)) {
@@ -120,17 +140,17 @@ void ReplaceSymbol(char *ret, int optimize)
 			i++;
 		}
 
-		strsub(laux, ret, ii+1, (int)strlen(ret)-ii);     /*copies the last part of the string to laux*/
-		/*ret[strpos2(ret, "#", 1)-1]='\0';*/        /*properly finishes the string*/
-		ret[ii-strlen(parameters[i].symbol)-2]='\0'; /*properly finishes the string*/
+		strsub(laux, ret, ii+1, (int)strlen(ret)-ii);    /*copies the last part of the string to laux*/
+		/*ret[strpos2(ret, "#", 1)-1]='\0';*/             /*properly finishes the string*/
+		ret[ii-(int)strlen(parameters[i].symbol)-2]='\0'; /*properly finishes the string*/
 
 		if (optimize==0) { /*optimize=0 : we are initializing*/
 			if (parameters[i].optimize==0)
-				sprintf(lxp, "%E", parameters[i].value);  /*writes the value*/
+				sprintf(lxp, "%E", parameters[i].value);   /*writes the value*/
 			else
 				sprintf(lxp, "#%s#",parameters[i].symbol); /*writes the #<symbol>#  back again*/
 		} else {           /*optimize=1 : we are optimizing*/
-			sprintf(lxp, "%E", parameters[i].value);          /*writes the value*/
+			sprintf(lxp, "%E", parameters[i].value);           /*writes the value*/
 		}
 		strcat(ret, lxp);
 		strcat(ret, laux);
@@ -158,9 +178,9 @@ void DecodeSymbolNode(char *ret, int i)
 	while (ii<=(int)strlen(ret)) {
 		Str2Lower(laux);
 		if (!strcmp(laux, "symbol"))
-			ii=ii+1000;                   /*it is a "symbol" and encode this information by adding '1000'*/
+			ii=ii+1000;                 /*it is a "symbol" and encode this information by adding '1000'*/
 		else {
-			if (strcmp(laux, "node")) {   /*if it is not "node" then exit*/
+			if (strcmp(laux, "node")) { /*if it is not "node" then exit*/
 				printf("initialize.c - DecodeSymbolNode -- Unrecognized option: %s\n", laux);
 				exit(EXIT_FAILURE);
 			}
@@ -170,7 +190,7 @@ void DecodeSymbolNode(char *ret, int i)
 			strsub(laux, ret, ii-1000+1, (int)strlen(ret)-(ii-1000)); /*copies the last part of the string to laux*/
 		else
 			strsub(laux, ret, ii+1, (int)strlen(ret)-ii);             /*copies the last part of the string to laux*/
-		ret[strpos2(ret, "#", 1)-1]='\0';                            /*properly finishes string                  */
+		ret[strpos2(ret, "#", 1)-1]='\0';                                 /*properly finishes string                  */
 		if (ii>1000) {
 			ii=ii-1000;
 			strcat(ret, UNIQUECHAR);                  /* unique sequence added to the symbol*/
@@ -492,12 +512,12 @@ int initialize(char *filename) /* , double *x) */
 				i=inlinestrpos(lkk);
 				ii=1;
 				ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-				if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?         */
-					if (strlen(lkk) && (!RFModule(lkk, 0, fspice_tmp)) )
-						fprintf(fspice_tmp, "%s\n", lkk);                  /* no: write line to <hostname>.tmp   */
-				} else {                                                           /* yes: replace #<text># in this line */
-					if (!RFModule(lkk, 0, fspice_tmp)) {
-						ReplaceSymbol(lkk, 0);
+				if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?           */
+					if ((int)strlen(lkk) && (!RFModule(lkk, 0, fspice_tmp)) )
+						fprintf(fspice_tmp, "%s\n", lkk);                      /* no: write line to <hostname>.tmp     */
+				} else {                                                               /* yes: replace #<text># in this line   */
+					if (!RFModule(lkk, 0, fspice_tmp)) {                           /*      -Symbol replaced in the RFmodule*/
+						ReplaceSymbol(lkk, 0);                                 /*      -Symbol yet to be replaced      */
 						fprintf(fspice_tmp, "%s\n", lkk); /* write line to <hostname>.tmp */
 					}
 				}
@@ -599,7 +619,7 @@ int initialize(char *filename) /* , double *x) */
 		sprintf(lkk, "%i", i);                                         /* to remove integer added in (*) */
 		ii=(int)strlen(lkk);                                           /* to remove integer added in (*) */
 		sprintf(lkk, "%s%s", "extract/", measurements[i].meas_symbol); /* to remove integer added in (*) */
-		lkk[strlen(lkk)-ii]='\0';                                      /* to remove integer added in (*) */
+		lkk[(int)strlen(lkk)-ii]='\0';                                 /* to remove integer added in (*) */
 		if ((fextract =fopen(lkk ,"rt")) == 0) {
 			printf("initialize.c - Step4.2 -- Cannot find measurement file: %s\n", lkk);
 			exit(EXIT_FAILURE);
@@ -617,7 +637,7 @@ int initialize(char *filename) /* , double *x) */
 		sprintf(lkk, "%i", i);                    /* to remove integer added in (*) */
 		ii=(int)strlen(lkk);                      /* to remove integer added in (*) */
 		strcpy(lkk, measurements[i].meas_symbol); /* to remove integer added in (*) */
-		lkk[strlen(lkk)-ii]='\0';                 /* to remove integer added in (*) */
+		lkk[(int)strlen(lkk)-ii]='\0';            /* to remove integer added in (*) */
 		switch(spice) {
 			case 1: /*Eldo*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
@@ -652,7 +672,7 @@ int initialize(char *filename) /* , double *x) */
 						sprintf(lkk, "%i", i);                                         /* to remove integer added in (*) */
 						ii=(int)strlen(lkk);                                           /* to remove integer added in (*) */
 						sprintf(lkk, "%s%s", "extract/", measurements[i].meas_symbol); /* to remove integer added in (*) */
-						lkk[strlen(lkk)-ii]='\0';                                      /* to remove integer added in (*) */
+						lkk[(int)strlen(lkk)-ii]='\0';                                 /* to remove integer added in (*) */
 						printf("initialize.c - Step4.2.1 -- .MEAS not supported in file: %s. Use .EXTRACT instead.\n", lkk);
 						exit(EXIT_FAILURE);
 					}

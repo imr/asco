@@ -27,7 +27,7 @@ typedef struct {
 	char var_name[LONGSTRINGSIZE]; /*variable name to use                      */
 	char search[LONGSTRINGSIZE];   /*search this string in output file         */
 	int s_column1;                 /*starting at 's_column1' ...               */
-	int line;                      /*at 'line' bellow the string already found */
+	int line;                      /*at 'line' below the string already found */
 	int column1, column2;          /*copy data between 'column1' and 'column2' */
 	char data[LONGSTRINGSIZE];     /*placeholder for measured data             */
 } measure_line;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Joao Ramos
+ * Copyright (C) 2005-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -336,7 +336,7 @@ void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, i
 			}
 		}
 
-	/*Step3.2.2: uppon sorting, add/remove 1 penalty penalty to each of the k fastest processes*/
+	/*Step3.2.2: uppon sorting, add/remove 1 penalty to each of the k fastest processes*/
 		i=1;
 		if (k>0) {
 			while (k!=0) {
@@ -386,6 +386,9 @@ void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, i
 	/**/
 	/*Step5: Everything is done!*/
 }
+
+
+
 #endif
 
 
@@ -481,6 +484,7 @@ int DE(int argc, char *argv[])
 	time_t t_start[MAXPOP], t_end[MAXPOP]; /*evaluates time each process spend simulating*/
 	double t_dif;
 	int sendcount[MAXPOP], displs[MAXPOP];      /* Arrays for sendcounts and displacements */
+	double loadavg=0;
 	#endif
 
 /*------Initializations----------------------------*/
@@ -585,11 +589,11 @@ int DE(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-
+	/*Finds how loaded are all slaves machines*/
 	if ( (MPI_METHOD==2) || (MPI_METHOD==3) ) { /* Method 2, 3: Master and Slave */
-		double loadavg=0;
 		if (id) { /*all but the Master do this*/
 			loadavg=LoadAVG();
+			dest_id = 0; /* Destination address */
 			err = MPI_Send(&loadavg, 1, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
 		} else {
 			for (i=1; i<ntasks; i++) {
@@ -601,8 +605,8 @@ int DE(int argc, char *argv[])
 			}
 		}
 	}
-	/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
-	if ( (MPI_METHOD==2) || ((MPI_METHOD==3) && (id==0)) ) { /* Method 2, 3: Master and Slave */
+	/*Generates fake cost, based in how loaded slave machines are*/
+	if ( (MPI_METHOD==2) || ((MPI_METHOD==3) && (id==0)) ) { /* Method 2, 3: Master and/or Slave */
 		for (i=1; i<ntasks; i++) {
 			sendcount[i]=MAXDIM;
 			t_start[i]=0;
@@ -611,9 +615,10 @@ int DE(int argc, char *argv[])
 				t_end[i]=1e9; /*   the machine is too loaded and do not use it   */
 			}
 		}
-		if (MPI_EXXIT==0) {
-			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
-		}
+	}
+	/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+	if (MPI_METHOD==2) {
+		LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
 	}
 	#endif
 
@@ -639,8 +644,8 @@ int DE(int argc, char *argv[])
 			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
 			 * due to low values of D and/or NP.                                     */
 
-			/* Receive the scattered matrix from process 0, place it in array tmp */
-			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1500, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			/* Receive the scattered matrix from process 0, place it in array tmp_y */
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+2000, MPI_DOUBLE, root, MPI_COMM_WORLD);
 			if (fcmp(tmp[0][0], 1.7976931348623157e+308)) { /*DBL_MAX from <float.h>, exit message*/
 				MPI_Finalize();
 				return (EXIT_SUCCESS); /*exit*/
@@ -654,9 +659,9 @@ int DE(int argc, char *argv[])
 			/*Returns cost to Master*/
 			MPI_Send (&trial_cost_y, sendcount[id]/MAXDIM, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
 		}
-		while(MPI_METHOD==3) { /* Method 3: Slave */
+		while (MPI_METHOD==3) { /* Method 3: Slave */
 			MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
-			if (sendcount[0]==123) { /*exit message*/
+			if (sendcount[0] == -123) { /*exit message*/
 				MPI_Finalize();
 				return (EXIT_SUCCESS); /*exit*/
 			}
@@ -668,7 +673,7 @@ int DE(int argc, char *argv[])
 			 * due to low values of D and/or NP.                                     */
 
 			/* Receive the scattered matrix from process 0, place it in array tmp_y */
-			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1500, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+2000, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
 			/*Calls optimization routine*/
 			for (i=0; i<sendcount[id]/MAXDIM; i++) {
@@ -688,8 +693,8 @@ int DE(int argc, char *argv[])
 		printf("de36.c - strategy=%d, should be ex {1,2,3,4,5,6,7,8,9,10}\n",strategy);
 		exit(EXIT_FAILURE);
 	}
-	if (genmax <= 0) {
-		printf("de36.c - genmax=%d, should be > 0\n",genmax);
+	if (genmax < 0) {
+		printf("de36.c - genmax=%d, should be >= 0\n",genmax);
 		exit(EXIT_FAILURE);
 	}
 	if (refresh <= 1) {
@@ -822,7 +827,7 @@ int DE(int argc, char *argv[])
 		}
 	}
 	if (MPI_METHOD==2) { /* Method 2: Master */
-		/* Scatter tmp to all proceses, place it in tmp_y */
+		/* Scatter c to all proceses, place it in tmp_y */
 		MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
 		nfeval=nfeval+NP;
 		/* Receive messages with scattered data from all slave processes */
@@ -842,19 +847,22 @@ int DE(int argc, char *argv[])
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/* sleep(1); */
-					/* printf("waking-up...\n"); */
 				}
 			}
 		}
 	}
 	if (MPI_METHOD==3) { /* Method 3: Master */
+		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+		if (MPI_EXXIT==0) {
+			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
+		}
+
 		MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 		MPI_Bcast(&displs, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 		/* */
 		time (&t_start[0]);
 
-		/* Scatter tmp to all proceses, place it in tmp_y */
+		/* Scatter c to all proceses, place it in tmp_y */
 		MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
 		nfeval=nfeval+NP;
 		/* Receive messages with scattered data from all slave processes */
@@ -878,18 +886,10 @@ int DE(int argc, char *argv[])
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/*sleep(1);*/
-					/* printf("waking-up...\n"); */
 				}
 			}
 		}
-
-		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
-		if (MPI_EXXIT==0) {
-			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
-		}
 	}
-
    #endif
    cmin = cost[0];
    imin = 0;
@@ -1152,8 +1152,6 @@ int DE(int argc, char *argv[])
 					if (MPI_EXXIT) {
 						NP=0;
 						genmax=0;
-						/* sleep(1); */
-						/* printf("waking-up...\n"); */
 					}
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 				}
@@ -1181,14 +1179,17 @@ int DE(int argc, char *argv[])
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/* sleep(1); */
-					/* printf("waking-up...\n"); */
 				}
 
 			}
 		}
 	}
 	if (MPI_METHOD==3) { /* Method 3: Master */
+		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+		if (MPI_EXXIT==0) {
+			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, trial_cost);
+		}
+
 		MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 		MPI_Bcast(&displs, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 		/* */
@@ -1218,16 +1219,9 @@ int DE(int argc, char *argv[])
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/* sleep(1); */
-					/* printf("waking-up...\n"); */
 				}
 
 			}
-		}
-
-		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
-		if (MPI_EXXIT==0) {
-			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, trial_cost);
 		}
 	}
       #endif
@@ -1356,10 +1350,9 @@ int DE(int argc, char *argv[])
 		err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
 	}
 	if (MPI_METHOD==3) {
-		sendcount[0]=123;
+		sendcount[0] = -123;
 		err = MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 	}
-
 	MPI_Finalize();
 	#endif
 /*mpi: MPI termination*/

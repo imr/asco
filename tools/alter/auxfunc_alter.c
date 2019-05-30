@@ -44,9 +44,9 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 	int i, j, k, kk, add, jj, l;
 	char data[LONGSTRINGSIZE];
 	FILE *fsweepINI, *falterINC;
-	line alter[ALTERLINES];   /*ALTERLINES in 'sweep.ini' file*/
-	int sweep[SWEEPLINES];    /*SWEEPLINES variables: [2123] */
-	int order[SWEEPLINES];    /*SWEEPLINES variables: [1111] [1112] [1113] [1121] ...*/
+	alter_line alter[ALTERLINES]; /*ALTERLINES in 'sweep.ini' file*/
+	int sweep[SWEEPLINES];        /*SWEEPLINES variables: [2123] */
+	int order[SWEEPLINES];        /*SWEEPLINES variables: [1111] [1112] [1113] [1121] ...*/
 	int ptr, num_lines, index, alter_times;
 
 

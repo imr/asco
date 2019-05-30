@@ -641,7 +641,7 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 /*
  *
  */
-char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
+char *CMOSLine2Text(char *Result, int measure_x_lines_below, char *OutputFile)
 {
 	FILE *fLIS;                /* Due to HSPICE 2001.2 line */
 	char lkk3[LONGSTRINGSIZE]; /*          "                */
@@ -649,7 +649,7 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 
 	switch(spice) {
 		case 1: /*Eldo*/
-			switch (measure_line) {   /*we have to read a number instead of text*/
+			switch (measure_x_lines_below) {   /*we have to read a number instead of text*/
 				case 3:
 					strcpy(Result, "ID");
 					break;
@@ -783,14 +783,14 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 
 			j = (strpos2(lkk3, "-- 200", 1)  ); /* Due to HSPICE 2001.2 line */
 			if (lkk3[j+5] != '0')               /*          "                */
-				measure_line--;             /* with the operation region */
+				measure_x_lines_below--;             /* with the operation region */
 
 			if (fLIS != NULL)
 				fclose(fLIS);
 			/* end of block
 			 *
 			 */
-			switch (measure_line) { /*we have to read a number instead of text*/
+			switch (measure_x_lines_below) { /*we have to read a number instead of text*/
 				case 2:
 					strcpy(Result, "id");
 					break;

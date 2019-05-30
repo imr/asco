@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Joao Ramos
+ * Copyright (C) 2004-2007 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -122,16 +122,17 @@ int main(int argc, char *argv[])
 	strcpy(lkk, argv[2]);
 	ii=strpos2(lkk, "/", 1);
 	#ifdef __MINGW32__
-	if (ii==0) ii=strpos2(lkk, "\\", 1);
+	if (ii==0)
+		ii=strpos2(lkk, "\\", 1);
 	#endif
 	if (ii) {           /*should character '/' exist, files are in a different directory*/
-		ii=strlen(lkk);
+		ii=(int)strlen(lkk);
 		#ifndef __MINGW32__
-		while (lkk[ii--] != 47) {} /* 47="/" */
+		while (lkk[ii] != '/')
 		#else
-		while (lkk[ii] != '/' && lkk[ii] != '\\') {ii--;} /* 47="/" */
+		while (lkk[ii] != '/' && lkk[ii] != '\\')
 		#endif
-		ii++;
+			ii--;
 
 		lkk[ii+1]='\0';
 		chdir(lkk); /*now, change directory                                         */

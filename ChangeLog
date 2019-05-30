@@ -1,3 +1,15 @@
+ASCO 0.4.6: March 25, 2007
+   * Improvements in the RF module functionality
+   * Include support for logarithmic search space for the existing variables
+   * Code refinements and bug fixes
+
+   Manual:
+   * Changes in the RF module to match new code developments
+   * Include support for logarithmic search space for the existing variables
+
+
+
+
 ASCO 0.4.5: October 8, 2006
    * Retouched load balancer
    * Emulation of local optimization using the parallel DE optimizer
@@ -5,7 +17,9 @@ ASCO 0.4.5: October 8, 2006
    * Minor enhancements
 
    Manual:
-   *
+   * amp3 example is now supported in LTspice
+   * Local optimization using the parallel DE added to 'Optimization algorithms'
+     and 'Parameter Options'
 
 
 
@@ -153,7 +167,7 @@ version 0.2.0: September 4, 2004
 
 
 
-version 0.1.0: July 17, 2004
+version 0.1.0: July 19, 2004
     * Code base divided in two major functions.
     * Can read and write a variable number of optimization variables
     * About 470 lines plus external functions

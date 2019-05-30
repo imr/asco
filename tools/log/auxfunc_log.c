@@ -36,6 +36,12 @@ void PrintOneLine(char *lkk1, double *stats, int num_measures, FILE **fOut)
 	for (i = 1; i <= num_measures; i=i+2) {
 		sprintf(laux, "%E", stats[i]);
 		j=strpos2(lkk, ":", j);
+
+		if ((laux2[j]=='-') && (laux[0]!='-')) { /*Special case: If value is       */
+			laux2[j]=' ';                    /*              negative but      */
+			j++;                             /*              sigma is positive */
+		}
+
 		for (k = 0; k <= (int)strlen(laux)-1; k++)
 			laux2[k+j]=laux[k];
 		j=j+k+2;
@@ -211,10 +217,15 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	WriteStats(num_measures-1, k, stats, &fOut);
 
 	/* -- */
+	i=0;
 	dd_ffblk fb;
 	char *mask="*.cfg";
-	if (!dd_findfirst( mask, &fb, DD_DIREC ))
-		printf("Opening config file: %s\n", fb.dd_name);
+	if (!dd_findfirst( mask, &fb, DD_DIREC )) {      /*Find first file having extension .cfg    */
+		if (!strcmp(fb.dd_name, "rfmodule.cfg")) /*and make sure that it is not rfmodule.cfg*/
+			i=dd_findnext(&fb);              /*otherwise find next .cfg file            */
+		if (i==0)
+			printf("Opening config file: %s\n", fb.dd_name);
+	}
 	/* -- */
 
 	fprintf(fOut, "\n\n# Parameters #\n");

@@ -27,7 +27,7 @@
 typedef struct line {
 	char text[LONGSTRINGSIZE];
 	char data[SWEEPVARS][LONGSTRINGSIZE];
-} line;
+} alter_line;
 
 
 

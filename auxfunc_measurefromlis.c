@@ -641,7 +641,7 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 /*
  *
  */
-char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
+char *CMOSLine2Text(char *Result, int measure_x_lines_below, char *OutputFile)
 {
 	FILE *fLIS;                /* Due to HSPICE 2001.2 line */
 	char lkk3[LONGSTRINGSIZE]; /*          "                */
@@ -649,7 +649,7 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 
 	switch(spice) {
 		case 1: /*Eldo*/
-			switch (measure_line) {   /*we have to read a number instead of text*/
+			switch (measure_x_lines_below) {   /*we have to read a number instead of text*/
 				case 3:
 					strcpy(Result, "ID");
 					break;
@@ -783,14 +783,14 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 
 			j = (strpos2(lkk3, "-- 200", 1)  ); /* Due to HSPICE 2001.2 line */
 			if (lkk3[j+5] != '0')               /*          "                */
-				measure_line--;             /* with the operation region */
+				measure_x_lines_below--;             /* with the operation region */
 
 			if (fLIS != NULL)
 				fclose(fLIS);
 			/* end of block
 			 *
 			 */
-			switch (measure_line) { /*we have to read a number instead of text*/
+			switch (measure_x_lines_below) { /*we have to read a number instead of text*/
 				case 2:
 					strcpy(Result, "id");
 					break;
@@ -1202,7 +1202,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 		read_p_line = FALSE;
 		for (k = 0; k <= j; k++) { /*1- for each one of the input lines, look if it is necessary to measure something*/
 			/*Step lkk1*/
-			strsub(lkk1, lkk, (int)measure[k].s_column1, (int)(strlen(measure[k].search) + 2));
+			strsub(lkk1, lkk, (int)measure[k].s_column1, (int)strlen(measure[k].search) + 2);
 			StripSpaces(lkk1); /*necessary when we want to find '******    alter processing listing'*/
 
 			/*Step lkk2*/
@@ -1243,7 +1243,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 
 		/*3*/
 		if (read_p_line) {        /*3- if data to measure has been found, then proced with the measurements*/
-			strsub(lkk1, lkk, (int)measure[0].s_column1, (int)(strlen(measure[0].search) + 2));
+			strsub(lkk1, lkk, (int)measure[0].s_column1, (int)strlen(measure[0].search) + 2);
 			StripSpaces(lkk1);
 			if (!strcmp(lkk1, measure[0].search) && (int)strlen(lkk1)>10) { /*Was ALTER simulation found?*/
 				if (mem&1)
