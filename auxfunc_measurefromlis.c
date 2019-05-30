@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -166,7 +166,7 @@ void DoMath(int num_measures)
 
 	for (i = 0; i <= num_measures; i++) {
 		sprintf(STR1, "%.4s", measure[i].search);
-		if (!strcmp(STR1, "math")) {   /*if a mathematical operation is requested, then*/
+		if (!strcasecmp(STR1, "math")) {   /*if a mathematical operation is requested, then*/
 			strcpy(lkk1, " ");
 			j=1;
 			while (*lkk1 != '\0') {
@@ -1024,8 +1024,9 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 		k--; /*Corrects the number of measurements to do*/
 	} else {
 	/*no, it is not a transistor*/
-		Str2Lower(lkk);
-		j = strpos2(lkk, "math", 1);
+		strcpy(STR1, lkk);
+		Str2Lower(STR1);
+		j = strpos2(STR1, "math", 1);
 		if (j == 0) { /*if equal to '0', we are reading a measurement*/
 			ReadSubKey(STR1, lkk, &i, ':', ':', 0);
 			j = (sscanf(ReadSubKey(STR1, lkk, &i, ':', ':', 5), "%d", &measure[k].s_column1) == 0); /* s_column1 */

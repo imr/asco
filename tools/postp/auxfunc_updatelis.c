@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -183,7 +183,7 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 				strcpy(skip[k - 1], laux);
 				k++;
 				if (k == SKIPTRAN) {
-					printf("auxfunc_updatelis.c - Cannot skip more than %d transistors\n", SKIPTRAN);
+					printf("auxfunc_updatelis.c - Maximum number of %d transistors to skip reached. Increase SKIPTRAN in auxfunc_updatelis\n", SKIPTRAN);
 					exit(EXIT_FAILURE);
 				}
 			}

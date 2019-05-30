@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -1082,7 +1082,7 @@ int ReadDataFromConfigFile(char *ConfigFile, char *OutputFile)
 
 		k++;
 		if (k > (MAXMEAS-1)) {
-			printf("auxfunc_measurefromlis.c - ReadDataFromConfigFile -- Cannot do more than %d MEASUREMENTS\n", MAXMEAS);
+			printf("auxfunc_measurefromlis.c - ReadDataFromConfigFile -- Maximum number of %d measurements reached. Increase MAXMEAS in auxfunc_measurefromlis.h\n", MAXMEAS);
 			exit(EXIT_FAILURE);
 			/*Possible error exist, as 'k' can be greater than 75, while
 			 * continuing to read variables. The 'MOST variable extraction'

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -149,7 +149,7 @@ double CostFunction()
 		}
 		i++;
 	}
-	if (cost<0) { //Minimum possible cost is '0'. MUST exit otherwise!
+	if (cost<0) { /* Minimum possible cost is '0'. MUST exit otherwise! */
 		printf("errfunc.c - CostFunction -- Cost cannot be negative!\n");
 		exit(EXIT_FAILURE);
 	}
@@ -262,18 +262,9 @@ void WriteToMem(int num_measures)
 	char laux[LONGSTRINGSIZE];
 	double currentcost;
 	
-	DoMath(num_measures); /*'MATH=&...'; information is in the variable 'measured_data'*/
-	
-	i=1;
-	j=0;
-	
 	while (measure[i].search[0] != '\0') {
-		strcpy(laux, UNIQUECHAR);
-		ii=0;
-		ii=     strpos2(measure[i].var_name, laux, 1); /*if UNIQUECHAR is inexisting in measure[i].var_name*/
-		Str2Lower(laux);
-		ii=ii + strpos2(measure[i].var_name, laux, 1); /* and Str2Lower(UNIQUECHAR) as well, this means we are processing a line with "MEASURE_VAR"*/
-		if (ii) {
+
+
 			switch(spice) {
 				case 1: /*Eldo*/
 					break;
@@ -285,11 +276,11 @@ void WriteToMem(int num_measures)
 					if (ii) {                                                    /* so specific code is added in here to cope with the difference */
 						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
 						strcpy(measure[i].data, laux);                       /*                                                               */
-						/*if (strpos2(laux, "dB,", 1)) {                             */ /*measure the AC magnitude*/
-						/*	ii=1;                                                */ /*measure the AC magnitude*/
-						/*	ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0); */ /*measure the AC magnitude*/
-						/*	strcpy(measure[i].data, laux);                       */ /*measure the AC magnitude*/
-						/*}                                                          */ /*measure the AC magnitude*/
+						if (strpos2(laux, "dB,", 1)) {                              /*measure the AC magnitude*/
+							ii=1;                                                 /*measure the AC magnitude*/
+							ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0);  /*measure the AC magnitude*/
+							strcpy(measure[i].data, laux);                        /*measure the AC magnitude*/
+						}                                                           /*measure the AC magnitude*/
 						/*if (strpos2(laux, "dB,", 1)) {                              */ /*measure the AC phase*/
 						/*	ii=1;                                                 */ /*measure the AC phase*/
 						/*	ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); */ /*measure the AC phase*/
@@ -305,6 +296,22 @@ void WriteToMem(int num_measures)
 					printf("errfunc.c - WriteToMem -- Something unexpected has happened!\n");
 					exit(EXIT_FAILURE);
 			}
+
+
+		i++;
+	}
+	DoMath(num_measures); /*'MATH=&...'; information is in the variable 'measured_data'*/
+	
+	i=1;
+	j=0;
+	
+	while (measure[i].search[0] != '\0') {
+		strcpy(laux, UNIQUECHAR);
+		ii=0;
+		ii=     strpos2(measure[i].var_name, laux, 1); /*if UNIQUECHAR is inexisting in measure[i].var_name*/
+		Str2Lower(laux);
+		ii=ii + strpos2(measure[i].var_name, laux, 1); /* and in Str2Lower(UNIQUECHAR) as well, this means we are processing a line with "MEASURE_VAR"*/
+		if (ii) {
 			strcpy(laux, UNIQUECHAR);
 			ii=strlen(laux);
 			strsub(laux, measure[i].var_name, ii+1, LONGSTRINGSIZE);             /*1- find output measure variable                                   */
@@ -556,13 +563,15 @@ double errfunc(char *filename, double *x)
 				/* bla bla bla*/
 				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
 
-				sprintf(laux, "%s.log", hostname);
-				if ((fspice_log=fopen(laux,"at")) == 0) {
-					printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
-					exit(EXIT_FAILURE);
+				if (LOG) {
+					sprintf(laux, "%s.log", hostname);
+					if ((fspice_log=fopen(laux,"at")) == 0) {
+						printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
+						exit(EXIT_FAILURE);
+					}
+					fprintf(fspice_log, "Alter: 1 - altermc=%d\n", AlterMC);
+					fclose(fspice_log);
 				}
-				fprintf(fspice_log, "Alter: 1 - altermc=%d\n", AlterMC);
-				fclose(fspice_log);
 
 strcpy (filename_x, filename);
 				strcat(filename_x, ".cfg");
@@ -599,23 +608,31 @@ strcpy (filename_x, filename);
 				/* bla bla bla*/
 				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
 
-				sprintf(laux, "%s.log", hostname);
-				if ((fspice_log=fopen(laux,"at")) == 0) {
-					printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
-					exit(EXIT_FAILURE);
+				if (LOG) {
+					sprintf(laux, "%s.log", hostname);
+					if ((fspice_log=fopen(laux,"at")) == 0) {
+						printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
+						exit(EXIT_FAILURE);
+					}
+					fprintf(fspice_log, "Alter: 2 - altermc=%d\n", AlterMC);
+					fclose(fspice_log);
 				}
-				fprintf(fspice_log, "Alter: 2 - altermc=%d\n", AlterMC);
-				fclose(fspice_log);
 
 				sprintf(lkk, "%s%s", hostname, ".tmp"); /*hostname is "longmorn"*/
 				if ((fspice_tmp =fopen(lkk  ,"r+t")) == 0) { /*netlist to simulate given by "hostname"*/
 					printf("errfunc.c - Step7 -- Cannot read from tmp file: %s\n", lkk);
 					exit(EXIT_FAILURE);
 				}
+				if ((fspice_log =fopen("alter.inc" ,"rt")) == 0) { /*If file 'alter.inc' does not exist  */
 strcpy (filename_x, filename);
-				strcat(filename_x, ".cfg");
-				CreateALTERinc(filename_x, lkk, 1); /*execute the 'alter' tool*/
-				fseek(fspice_tmp, 0, SEEK_END); /*properly position the pointer*/
+					strcat(filename_x, ".cfg");
+					CreateALTERinc(filename_x, lkk, 1); /*execute the 'alter' tool*/
+					fseek(fspice_tmp, 0, SEEK_END); /*properly position the pointer*/
+				} else { /* file 'alter.inc', so use it instead of the 'alter' tool */
+					fseek(fspice_tmp, -5, SEEK_END); /*properly position the pointer*/
+					fprintf(fspice_tmp, ".INCLUDE alter.inc\n");  /*write*/
+				}
+				/* fseek(fspice_tmp, 0, SEEK_END); */ /*properly position the pointer*/
 				fprintf(fspice_tmp, ".end\n");  /*add ".end"*/
 				fclose(fspice_tmp);
 

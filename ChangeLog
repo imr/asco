@@ -1,3 +1,14 @@
+ASCO 0.3.12: January 29, 2006
+   * RF module included 
+   * Minor bug fixes
+
+   Manual:
+   * RF module and examples describing the its usage included
+   * Section 'Getting Started' explains text written by de36.c to stdout
+
+
+
+
 ASCO 0.3.11: December 26, 2005
     * 'alter', ' monte' and 'postp' analysis tools added
     * Code clean-up

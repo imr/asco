@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -91,6 +91,6 @@ int main(int argc, char *argv[])
 	
 	/**/
 	/*Step4: */
-	MonteCarlo(argv[3], argv[2], fileMC);;
+	MonteCarlo(argv[3], argv[2], fileMC);
 	exit(EXIT_SUCCESS);
 }

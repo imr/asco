@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -95,6 +95,11 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 		ptr = 1;
 		while (lkk[0] != '#') {   /*this block will read the options in the configuration file*/
 			if (lkk[0] != '*') {
+				if (i > (ALTERLINES)) {
+					printf("auxfunc_alter.c - Maximum number of %d lines reached. Increase ALTERLINES in auxfunc_alter.h\n", ALTERLINES);
+					exit(EXIT_FAILURE);
+				}
+
 				j = strpos2(lkk, "$", 1); /*This will skip the characters after '$', the inline comment used by the sweep tools*/
 				if (j != 0)
 					sprintf(lkk, "%.*s", (int)(j - 1), strcpy(data, lkk));
@@ -162,7 +167,7 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 
 		if (alter_times > 65536L || kk > SWEEPLINES) {
 			if (kk > SWEEPLINES) {
-				printf("auxfunc_alter.c - More than %d variables to sweep reached\n", SWEEPLINES);
+				printf("auxfunc_alter.c - Maximum number of %d variables to sweep reached. Increase SWEEPLINES in auxfunc_alter.h\n", SWEEPLINES);
 				exit(EXIT_FAILURE);
 			} else {
 				printf("auxfunc_alter.c - More than 65536 simulations reached\n");

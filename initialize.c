@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -243,13 +243,13 @@ int initialize(char *filename) /* , double *x) */
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg); /*should RF parasitics be added?*/
 		Str2Lower(lkk);
 		ii=1;
-/*		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);                                            */
+		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);
 		if (!strcmp(laux, "yes"))         /*RF==yes*/
 			ExecuteRF=1;
 		else {
 			if (strcmp(laux, "no")) { /*RF!=no*/
-/*				printf("initialize.c - Step1 -- Incorrect line format: %s\n", lkk); */
-/*				exit(EXIT_FAILURE);                                                 */
+				printf("initialize.c - Step1 -- Incorrect line format: %s\n", lkk);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -264,8 +264,9 @@ int initialize(char *filename) /* , double *x) */
 	} else {
 		i=0;
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
-		while ((lkk[0] != '#') && (lkk[0] != '\0') && (ii=strpos2(lkk, ":", 1)) && (!feof(fspice_cfg))) {
+		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(fspice_cfg))) {
 			if (lkk[0] != '*') {
+				ii=strpos2(lkk, ":", 1);
 				if (lkk[ii-1] != ':') {
 					printf("initialize.c - Step2 -- Incorrect line format: %s\n", lkk);
 					exit(EXIT_FAILURE);
@@ -346,8 +347,9 @@ int initialize(char *filename) /* , double *x) */
 	} else {
 		i=0;
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
-		while ((lkk[0] != '#') && (lkk[0] != '\0') && (ii=strpos2(lkk, ":", 1)) && (!feof(fspice_cfg))) {
+		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(fspice_cfg))) {
 			if (lkk[0] != '*') {
+				ii=strpos2(lkk, ":", 1);
 				if (lkk[ii-1] != ':') {
 					printf("initialize.c - Step3 -- Incorrect line format: %s\n", lkk);
 					exit(EXIT_FAILURE);

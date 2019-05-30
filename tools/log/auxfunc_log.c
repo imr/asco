@@ -1,15 +1,15 @@
 /*
- *  Copyright (C) 1999-2005 Joao Ramos
+ *  Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  */
 
 #include <stdio.h>
-//#include <ctype.h>
+/* #include <ctype.h> */
 #include <math.h>
-//#include <setjmp.h>
-//#include <assert.h>
+/* #include <setjmp.h> */
+/* #include <assert.h> */
 #include <stdlib.h>
 #include <string.h>
 
@@ -83,7 +83,7 @@ void SimpleParametersCategory(int num_measures, char *llog, statistics stats, FI
 	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
 
 	fprintf(*fOut, "\n\n");
-	llog[0]=58; //':'
+	llog[0]=58; /* ':' */
 	j=1;
 	for (i = 1; i <= (num_measures); i=i+2) {
 		ReadSubKey(lkk1, llog, &j, ':', ':', 0);
@@ -109,9 +109,9 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 		fgets2(lkk, LONGSTRINGSIZE, *fcfg);
 		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(*fcfg))) {
 			i=strpos2(lkk, ":OPT", 1);
-			if (i) { //line with OPT
+			if (i) { /* line with OPT */
 				j=1;
-				ReadSubKey(lkk1, lkk, &j, '#', '#', 5); //lkk1=symbol
+				ReadSubKey(lkk1, lkk, &j, '#', '#', 5); /* lkk1=symbol */
 				lkk2[0]='\0';
 				i=0;
 				j=1;
@@ -120,7 +120,7 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 					ReadSubKey(lkk2, llog, &j, ':', ':', 0);
 					StripSpaces(lkk2);
 				}
-				i++; //the correct possition of the value
+				i++; /*the correct possition of the value*/
 				j=1;
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
@@ -133,7 +133,7 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 				strcat(lkk1, lkk2);
 				fprintf(*fOut, "%s\n", lkk1);
 
-			} else { //line with ---
+			} else { /* line with --- */
 				fprintf(*fOut, "%s\n", lkk);
 			}
 			fgets2(lkk, LONGSTRINGSIZE, *fcfg);
@@ -155,8 +155,8 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	double aux;
 	int num_measures;
 
-//------------------------------------------------------------------
-//------------------------------------------------------------------
+/* ------------------------------------------------------------------
+   ------------------------------------------------------------------ */
 	/*create summary: table version*/
 	for (i = 0; i <= (MAXMEAS-1); i++) {
 		stats.avg[i] = 0.0;   /*initialization of statistics variables*/
@@ -203,27 +203,27 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	WriteStats(num_measures-1, k, stats, &fOut);
 
 
-	//--
+	/* -- */
 	dd_ffblk fb;
 	char *mask="*.cfg";
 	if (!dd_findfirst( mask, &fb, DD_DIREC ))
 		printf("Opening config file: %s\n", fb.dd_name);
-	//--
+	/* -- */
 
 
-//--------
+/*--------*/
 	char llog[LONGSTRINGSIZE];
-	strcpy(llog,lkk); //last line from log file
+	strcpy(llog,lkk); /*last line from log file*/
 
 	fcfg=NULL;
 	if ((fcfg=fopen(fb.dd_name,"rt")) == 0) {
 		if (fb.dd_name) {
 			printf("auxfunc_log.c - Cannot open config file: %s\n", fb.dd_name);
-			//exit(EXIT_FAILURE);
+			/*exit(EXIT_FAILURE);*/
 			}
 		SimpleParametersCategory(num_measures-1, llog, stats, &fOut);
 	} else {
-		ReadKey(lkk, "# Parameters #", fcfg);   //configuration parameters
+		ReadKey(lkk, "# Parameters #", fcfg);   /*configuration parameters*/
 		if (strcmp(lkk, "# Parameters #")) {
 			printf("INFO:  initialize.c - Step2 -- No parameters in config file\n");
 			SimpleParametersCategory(num_measures-1, llog, stats, &fOut);
@@ -231,7 +231,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 			ComplexParametersCategory(llog, stats, &fOut, &fcfg);
 		}
 	}
-//--------
+/*--------*/
 
 
 	if (fOut != NULL)
@@ -240,6 +240,6 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	if (fIn != NULL)
 		fclose(fIn);
 	fIn = NULL;
-//------------------------------------------------------------------
-//------------------------------------------------------------------
+/* ------------------------------------------------------------------
+   ------------------------------------------------------------------ */
 }

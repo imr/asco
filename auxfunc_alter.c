@@ -35,7 +35,9 @@ void read_sweep_vars(char *Result, char *data)
 
 
 /*
- * create the file 'alter.inc' to be included in *.sp file
+ * create the file 'alter.inc' to be included in <inputfile>.* file. Depending
+ * the value of the 'append' variable, the data is append or a new file is
+ * created.
  */
 void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 {

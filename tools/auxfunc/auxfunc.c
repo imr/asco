@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -128,6 +128,11 @@ void fgets2(char *s, int n, FILE *stream)
 	TEMP = strchr(s, '\n');
 	if (TEMP != NULL)
 		*TEMP = 0;
+	
+	if (strlen (s)>LONGSTRINGSIZE-2) {
+		printf("INFO:  auxfunc.c - fgets2 -- maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
+		/* exit(EXIT_FAILURE); */
+	}
 } /*fgets2*/
 
 
@@ -152,7 +157,7 @@ int inlinestrpos(char *s)
 			k = strpos2(s, ";", 1);
 			break;
 		case 4: /*Spectre*/
-			k = 0; /*Not defined at this momment*/
+			k = strpos2(s, "//", 1);
 			break;
 		case 100: /*ROSEN*/
 			k = 0;
