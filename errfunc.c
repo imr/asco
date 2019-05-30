@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+#include <wait.h>
 
 
 #include "auxfunc.h"
@@ -149,9 +151,12 @@ double CostFunction()
 		}
 		i++;
 	}
-	if (cost<0) { /* Minimum possible cost is '0'. MUST exit otherwise! */
+	if (cost<0) { /* Minimum numerical possible cost is '0'. MUST exit otherwise! */
 		printf("errfunc.c - CostFunction -- Cost cannot be negative!\n");
 		exit(EXIT_FAILURE);
+	}
+	if ((cost<1e-20) && (spice<100)) { /* In SPICE, it is very unlikely that the cost is anywhere close to 0 */
+		printf("INFO:  errfunc.c - CostFunction -- Cost is very close to zero, probably due to an error.\n");
 	}
 	return (cost);
 }
@@ -261,7 +266,8 @@ void WriteToMem(int num_measures)
 	int i, ii, j;
 	char laux[LONGSTRINGSIZE];
 	double currentcost;
-	
+
+	i=1; /*It must start with 1*/
 	while (measure[i].search[0] != '\0') {
 
 
@@ -276,11 +282,11 @@ void WriteToMem(int num_measures)
 					if (ii) {                                                    /* so specific code is added in here to cope with the difference */
 						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
 						strcpy(measure[i].data, laux);                       /*                                                               */
-						if (strpos2(laux, "dB,", 1)) {                              /*measure the AC magnitude*/
-							ii=1;                                                 /*measure the AC magnitude*/
-							ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0);  /*measure the AC magnitude*/
-							strcpy(measure[i].data, laux);                        /*measure the AC magnitude*/
-						}                                                           /*measure the AC magnitude*/
+						if (strpos2(laux, "dB,", 1)) {                               /*measure the AC magnitude*/
+							ii=1;                                                /*measure the AC magnitude*/
+							ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0); /*measure the AC magnitude*/
+							strcpy(measure[i].data, laux);                       /*measure the AC magnitude*/
+						}                                                            /*measure the AC magnitude*/
 						/*if (strpos2(laux, "dB,", 1)) {                              */ /*measure the AC phase*/
 						/*	ii=1;                                                 */ /*measure the AC phase*/
 						/*	ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); */ /*measure the AC phase*/
@@ -301,10 +307,8 @@ void WriteToMem(int num_measures)
 		i++;
 	}
 	DoMath(num_measures); /*'MATH=&...'; information is in the variable 'measured_data'*/
-	
-	i=1;
-	j=0;
-	
+
+	i=1; /*It must start with 1*/
 	while (measure[i].search[0] != '\0') {
 		strcpy(laux, UNIQUECHAR);
 		ii=0;
@@ -324,10 +328,10 @@ void WriteToMem(int num_measures)
 				}
 				j++;
 			}
-	
+
 			strcpy(laux, measure[i].data);                                       /*3- read measurement                                               */
 			StripSpaces(laux);
-	
+
 			measurements[j].measured_value=asc2real(laux, 1, (int)strlen(laux)); /*4- convert it to double                                           */
 
 			if (measurements[j].measured_value ==0) {                            /*5- Check NaN and other text strings                               */
@@ -374,7 +378,8 @@ void WriteToMem(int num_measures)
 double errfunc(char *filename, double *x)
 {
 	/*double currentcost;*/ /*total cost*/
-	int i, ii, ccode;
+	unsigned int i, ii;
+	int ccode;
 	char laux[LONGSTRINGSIZE], hostname[SHORTSTRINGSIZE] = {0}, filename_x[SHORTSTRINGSIZE] = {0};
 
 	/*   <hostname>.*   <hostname>.out  <hostname>.tmp <hostname>.log*/
@@ -399,7 +404,7 @@ double errfunc(char *filename, double *x)
 	/**/
 	/*Step2: read from <hostname>.tmp and write to <hostname>.**/
 	/*                                                                                                                   */
-	/*??it is not necessary to check every time for the possibility to read/write. Move to initicialization if possible??*/
+	/* It is not necessary to check every time for the possibility to read/write. Move to initicialization if possible!! */
 	/*                                                                                                                   */
 	#ifdef DEBUG
 	printf("DEBUG: errfunc.c - Step2\n");
@@ -478,10 +483,10 @@ double errfunc(char *filename, double *x)
 	#endif
 	switch(spice) {
 		case 1: /*Eldo*/
-			sprintf(lkk, "eldo %s.cir > %s.out", hostname, hostname);
+			sprintf(lkk, "eldo -noconf -i %s.cir > %s.out", hostname, hostname);
 			break;
 		case 2: /*HSPICE*/
-			sprintf(lkk, "hspice %s.sp -o %s.lis > /dev/null", hostname, hostname);
+			sprintf(lkk, "hspice -i %s.sp -o %s.lis > /dev/null", hostname, hostname);
 			break;
 		case 3: /*LTSpice*/
 			sprintf(lkk, "ltspice -b %s.net > /dev/null", hostname);
@@ -496,7 +501,11 @@ double errfunc(char *filename, double *x)
 			printf("errfunc.c - Step3 -- Something unexpected has happened!\n");
 			exit(EXIT_FAILURE);
 	}
-	system(lkk);
+	ii=system(lkk);
+	if (WIFSIGNALED(ii) && (WTERMSIG(ii) == SIGINT || WTERMSIG(ii) == SIGQUIT)) {
+		printf("errfunc.c - Step3 -- Ctrl-C key pressed. Exiting optimization loop.\n");
+		exit(EXIT_FAILURE);
+	}
 
 
 	/**/

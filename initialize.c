@@ -79,7 +79,7 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
  */
 char *ReplaceSymbol(char *ret, int optimize)
 {
-	int i, k, ii;
+	unsigned int i, k, ii;
 	char laux[LONGSTRINGSIZE], inlinecomment[LONGSTRINGSIZE], lxp[LONGSTRINGSIZE];
 
 	k=inlinestrpos(ret);
@@ -133,7 +133,7 @@ char *ReplaceSymbol(char *ret, int optimize)
  */
 char *DecodeSymbolNode(char *ret, int i)
 {
-	int ii;
+	unsigned int ii;
 	char laux[LONGSTRINGSIZE];
 	
 	ii=1;
@@ -185,7 +185,8 @@ char *DecodeSymbolNode(char *ret, int i)
  */
 int initialize(char *filename) /* , double *x) */
 {
-	int i, ii, ccode;
+	unsigned int i, ii;
+	int ccode;
 	char laux[LONGSTRINGSIZE], laux2[SHORTSTRINGSIZE], hostname[SHORTSTRINGSIZE] = {0};
 
 	/*   <inputfile>.*   <inputfile>.cfg <hostname>.tmp /extract/<file> */

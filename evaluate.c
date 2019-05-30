@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -26,13 +26,16 @@
 
 
 /*
- *      1: call function 'initialize' to prepare structures and files for simulation
- *      2: call function 'errfunc' which does the remaining task and runs the SPICE simulator
+ *      1: Initialization of all variables and strucutres
+ *      2: Return a high cost if proposed values are not within [-10, 10] range except for the first call
+ *      3: In DEBUG mode, use initial values from the <inputfile>.cfg file
+ *      4: Call optimization routine
+ *      5:
  *
  * D: number of parameters of the cost function
  * x: parameters proposed by the optimizer routine are stored in 'x'
  */
-double evaluate(int D, double x[], long *nfeval, char *filename)
+double evaluate(int D, double x[], char *filename)
 {
 	int ii;
 	double cost;
@@ -40,13 +43,13 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 
 	/**/
 	/*Step1: Initialization of all variables and strucutres*/
-	(*nfeval)++;
+	/* (*nfeval)++; */
+	cost=0;
 
 
 	/**/
-	/*Step2: return a high cost if proposed values are not within [-10, 10] range except for the first call*/
+	/*Step2: Return a high cost if the proposed values are not within [-10, 10] range except when in DEBUG mode*/
 	#ifndef DEBUG
-	cost=0;
 	for (ii = 0; ii < D; ii++) {
 		if (x[ii]<-10) {
 			cost=cost+1e30*(-10-x[ii]);
@@ -61,21 +64,16 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 
 
 	/**/
-	/*Step3: use initial values stored in the <inputfile>.cfg file*/
-	#ifndef DEBUG
-	if (*nfeval==1) {
-	#else
-	if (1) {
-	#endif
-		for (ii = 0; ii < D; ii++) {
-			x[ii] = scaleto(parameters[ii].value, parameters[ii].minimum, parameters[ii].maximum, -10, +10, parameters[ii].format);
-		}
+	/*Step3: In DEBUG mode, use initial values from the <inputfile>.cfg file*/
+	#ifdef DEBUG
+	for (ii = 0; ii < D; ii++) {
+		x[ii] = scaleto(parameters[ii].value, parameters[ii].minimum, parameters[ii].maximum, -10, +10, parameters[ii].format);
 	}
-
+	#endif
 
 
 	/**/
-	/*Step4: call optimization routine*/
+	/*Step4: Call optimization routine*/
 	if (spice) {
 		#ifdef DEBUG
 		printf("DEBUG: evaluate.c - Executing errfunc\n");

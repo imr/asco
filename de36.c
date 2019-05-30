@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Joao Ramos
+ * Copyright (C) 2005-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -82,6 +82,9 @@
 #include "de.h"
 #include "auxfunc.h"
 #include "initialize.h"
+#ifdef MPI
+#include "mpi.h"
+#endif
 
 /*------------------------Macros----------------------------------------*/
 
@@ -101,7 +104,7 @@ double (*pold)[MAXPOP][MAXDIM], (*pnew)[MAXPOP][MAXDIM], (*pswap)[MAXPOP][MAXDIM
 
 void  assignd(int D, double a[], double b[]);
 double rnd_uni(long *idum);    /* uniform pseudo random number generator */
-double extern evaluate(int D, double tmp[], long *nfeval, char *filename); /* obj. funct. */
+double extern evaluate(int D, double tmp[], char *filename); /* obj. funct. */
 
 /*---------Function definitions-----------------------------------------*/
 
@@ -242,10 +245,10 @@ int DE(int argc, char *argv[])
 
    long  nfeval;          /* number of function evaluations     */
 
-   double trial_cost;      /* buffer variable                    */
+   double trial_cost[MAXPOP];      /* buffer variable                    */
    double inibound_h;      /* upper parameter bound              */
    double inibound_l;      /* lower parameter bound              */
-   double tmp[MAXDIM], best[MAXDIM], bestit[MAXDIM]; /* members  */
+   double tmp[MAXPOP][MAXDIM], best[MAXDIM], bestit[MAXDIM]; /* members  */
    double cost[MAXPOP];    /* obj. funct. values                 */
    double cvar;            /* computes the cost variance         */
    double cvarmin; /*stop criteria*/
@@ -258,26 +261,26 @@ int DE(int argc, char *argv[])
 
 /*------Initializations----------------------------*/
 
+/*mpi: MPI initialization*/
+	#ifdef MPI
+	int m;
+	const int tag = 42;	        /* Message tag */
+	MPI_Status status;
+	int id, ntasks, source_id, dest_id, err;
+	double cost_mpi; /* cost of each one of the slave evaluations */
+
+	err = MPI_Comm_size(MPI_COMM_WORLD, &ntasks); /* Get nr of tasks */
+	err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
+	if (ntasks < 2) {
+		printf("de36.c - At least 2 processors are required to run this program\n");
+		MPI_Finalize(); /* Quit if there is only one processor */
+		exit(EXIT_FAILURE);
+	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	m=ntasks-1;  /*number of slave machines*/
+	#endif
+/*mpi: MPI initialization*/
 
 
 /*-----Read input data------------------------------------------------*/
@@ -295,7 +298,7 @@ fpin_ptr   = fopen(laux,"r"); /*fpin_ptr   = fopen(argv[1],"r");*/
  if (fpin_ptr == NULL)
  {
     printf("de36.c - Cannot open input file: %s\n", laux);
-    exit(1);
+    exit(EXIT_FAILURE);
  }
 
 ReadKey(lkk, "#DE#", fpin_ptr); /* .cfg file*/
@@ -360,71 +363,109 @@ Wcon=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to t
 
 fclose(fpin_ptr);
 
+/*mpi: slave code begins*/
+	#ifdef MPI
+	if (id) { /*If it is a slave process*/
+		while(1) {
+			i=0;
+			err = MPI_Recv(tmp[i], D, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status); /* Receive a message */
+			//err = MPI_Irecv(tmp, 2, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &recv_req);
+			//MPI_Wait(&recv_req, &status);
+			//source_id = status.MPI_SOURCE; /* Get id of sender */
+			//printf("Slave %d --- Received message %E %E from process %d\n", id, tmp[i][0], tmp[i][1], source_id);
+			//fflush(stdout);
+			if (tmp[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
+				//printf("Slave %d sleeping\n", id);
+				//fflush(stdout);
+				//sleep(4);
+				//printf("Slave %d exiting\n", id);
+				//fflush(stdout);
+				MPI_Finalize();
+				return (EXIT_SUCCESS);   /*exit*/
+			}
+			//sleep(1); /*Simulate performing calculations*/
+			cost_mpi = evaluate(D,tmp[0],argv[2]);  /* Evaluate new vector in tmp[] */
+			//printf("Slave %d --- Job done\n", id);
+			//fflush(stdout);
+			//cost_mpi = 10*tmp[i][0]; /* Put own identifier in the message */
+			dest_id = 0;            /* Destination address */
+			err = MPI_Send(&cost_mpi, 1, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+			//err = MPI_Isend(tmp, 2, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
+			//MPI_Wait(&send_req, &status);
+		}
+
+	/*Vectors have been received. Call simulation*/
+	/*Evaluate new vector in tmp[] */
+	/*Return cost to master process*/
+	/*Exit upon receiving end signal*/
+	}
+	#endif
+/*mpi: slave code ends*/
+
 /*-----Checking input variables for proper range----------------------------*/
 
 	if ((strategy < 0) || (strategy > 10)) {
 		printf("de36.c - strategy=%d, should be ex {1,2,3,4,5,6,7,8,9,10}\n",strategy);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (genmax <= 0) {
 		printf("de36.c - genmax=%d, should be > 0\n",genmax);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (refresh <= 1) {
 		printf("de36.c - refresh=%d, should be > 1\n",refresh);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (D > MAXDIM) {
 		printf("de36.c - D=%d > MAXDIM=%d, should be less\n",D,MAXDIM);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (D <= 0) {
 		printf("de36.c - D=%d, should be > 0\n",D);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (NP > MAXPOP) {
 		printf("de36.c - NP=%d > MAXPOP=%d, should be less\n",NP,MAXPOP);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (NP <= 6) {
 		printf("de36.c - NP=%d, should be > 6\n",NP);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (NP <= D) {
-		printf("INFO:  de36.c - NP=%d, should be > D=%d\n",NP, D);
-		exit(1);
+		printf("INFO:  de36.c - NP=%d, it is advisable to be > D=%d\n",NP, D);
 	}
 	if (inibound_h < inibound_l) {
 		printf("de36.c - inibound_h=%f < inibound_l=%f\n",inibound_h, inibound_l);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if ((F < 0) || (F > 2.0)) {
 		printf("de36.c - F=%f, should be ex [0,2]\n",F);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if ((CR < 0) || (CR > 1.0)) {
 		printf("de36.c - CR=%f, should be ex [0,1]\n",CR);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (seed <= 0) {
 		printf("de36.c - seed=%d, should be > 0\n",seed);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (cvarmin <= 0) {
 		printf("de36.c - cvarmin=%f, should be > 0\n",cvarmin);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (Wobj <= 0) {
 		printf("de36.c - Wobj=%f, should be > 0\n",Wobj);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (Wcon <= 0) {
 		printf("de36.c - Wcon=%f, should be > 0\n",Wcon);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (Wobj > Wcon) {
 		printf("de36.c - Wobj=%f > Wcon=%f, should be less\n",Wobj, Wcon);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 /*-----Open output file-----------------------------------------------*/
@@ -434,7 +475,7 @@ fclose(fpin_ptr);
    if (fpout_ptr == NULL)
    {
       printf("de36.c - Cannot open output file: asco.log\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
 
@@ -457,8 +498,46 @@ fclose(fpin_ptr);
       {
 	 c[i][j] = inibound_l + rnd_uni(&rnd_uni_init)*(inibound_h - inibound_l);
       }
-      cost[i] = evaluate(D,c[i],&nfeval,argv[2]); /* obj. funct. value */
    }
+   #ifndef MPI
+   for (i=0; i<NP; i++) /*mpi: */
+   {
+	nfeval++;
+	cost[i] = evaluate(D,c[i],argv[2]); /* obj. funct. value */
+   }
+   #else /*mpi: Master code to call slave*/
+		//printf("NP=%d D=%d m=%d\n", NP, D, m);
+		for (i=0; i<(int)((NP/m)+1); i++) {
+			for (j=0; j<m; j++) { /* Send a message */
+				if ( (j+m*i) <= (NP-1) ) {
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+					//tmp[j+m*i][0] = j+m*i;     /* Put own identifier in the message */
+					//tmp[j+m*i][1] = ntasks + (j+m*i);        /* and total number of processes */
+					dest_id=j+1;            /* Destination address */
+					//printf("Sending message -%d- to machine -%d-\n", j+m*i, dest_id);
+					nfeval++;
+					//printf("Sending message %E %E to machine -%d-\n", c[j+m*i][0], c[j+m*i][1], dest_id);
+					//fflush(stdout);
+					err = MPI_Send(c[j+m*i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+					//err = MPI_Isend(tmp, D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
+					//MPI_Wait(&send_req, &status);
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+				}
+			}
+			for (j=0; j<m; j++) {
+				if ( (j+m*i) <= (NP-1) ) {
+					err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
+					//err = MPI_Irecv(tmp, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &recv_req);
+					//MPI_Wait(&recv_req, &status);
+					source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
+					cost[source_id-1]=cost_mpi;
+					//printf("Received message %E from process %d\n", cost_mpi, source_id);
+					//printf("--- - ---\n");
+					//fflush(stdout);
+				}
+			}
+		}
+   #endif
    cmin = cost[0];
    imin = 0;
    for (i=1; i<NP; i++)
@@ -480,11 +559,10 @@ fclose(fpin_ptr);
 /*=========Iteration loop================================================*/
 /*=======================================================================*/
 
-   gen = 0;                          /* generation counter reset */
+   gen = 1;                          /* generation counter reset */
    cvar = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
    while ((gen <= genmax) && (cvar > cvarmin)/*&& (kbhit() == 0)*/) /* remove comments if conio.h */
    {                                                               /* is accepted by compiler    */
-      gen++;
       imin = 0;
 
       for (i=0; i<NP; i++)         /* Start of loop through ensemble  */
@@ -538,12 +616,12 @@ fclose(fpin_ptr);
 /*-------optimization problems where misconvergence occurs.-------------------------------*/
 	 if (strategy == 1) /* strategy DE0 (not in our paper) */
 	 {
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
 	   {                       
-	     tmp[n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
+	     tmp[i][n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     n = (n+1)%D;
 	     L++;
 	   }while((rnd_uni(&rnd_uni_init) < CR) && (L < D));
@@ -554,12 +632,12 @@ fclose(fpin_ptr);
 /*-------as a first guess.---------------------------------------------------------------*/
 	 else if (strategy == 2) /* strategy DE1 in the techreport */
 	 {
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
 	   {                       
-	     tmp[n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
+	     tmp[i][n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     n = (n+1)%D;
 	     L++;
 	   }while((rnd_uni(&rnd_uni_init) < CR) && (L < D));
@@ -570,12 +648,12 @@ fclose(fpin_ptr);
 /*-------should play around with all three control variables.----------------------------*/
 	 else if (strategy == 3) /* similiar to DE2 but generally better */
 	 { 
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
 	   L = 0;
 	   do
 	   {                       
-	     tmp[n] = tmp[n] + F*(bestit[n] - tmp[n]) + F*((*pold)[r1][n]-(*pold)[r2][n]);
+	     tmp[i][n] = tmp[i][n] + F*(bestit[n] - tmp[i][n]) + F*((*pold)[r1][n]-(*pold)[r2][n]);
 	     n = (n+1)%D;
 	     L++;
 	   }while((rnd_uni(&rnd_uni_init) < CR) && (L < D));
@@ -583,12 +661,12 @@ fclose(fpin_ptr);
 /*-------DE/best/2/exp is another powerful strategy worth trying--------------------------*/
 	 else if (strategy == 4)
 	 { 
-	   assignd(D,tmp,(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   assignd(D,tmp[i],(*pold)[i]);
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
 	   {                           
-	     tmp[n] = bestit[n] + 
+	     tmp[i][n] = bestit[n] + 
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     n = (n+1)%D;
 	     L++;
@@ -596,13 +674,13 @@ fclose(fpin_ptr);
 	 }
 /*-------DE/rand/2/exp seems to be a robust optimizer for many functions-------------------*/
 	 else if (strategy == 5)
-	 {
-	   assignd(D,tmp,(*pold)[i]);
+	 { 
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
 	   L = 0;
 	   do
-	   {
-	     tmp[n] = (*pold)[r5][n] + 
+	   {                           
+	     tmp[i][n] = (*pold)[r5][n] + 
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     n = (n+1)%D;
 	     L++;
@@ -614,13 +692,13 @@ fclose(fpin_ptr);
 /*-------DE/best/1/bin--------------------------------------------------------------------*/
 	 else if (strategy == 6) 
 	 {
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
 	     {                       
-	       tmp[n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
+	       tmp[i][n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     }
 	     n = (n+1)%D;
            }
@@ -628,13 +706,13 @@ fclose(fpin_ptr);
 /*-------DE/rand/1/bin-------------------------------------------------------------------*/
 	 else if (strategy == 7) 
 	 {
-	   assignd(D,tmp,(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D);
+	   assignd(D,tmp[i],(*pold)[i]);
+	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
 	     {                       
-	       tmp[n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
+	       tmp[i][n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     }
 	     n = (n+1)%D;
            }
@@ -642,27 +720,27 @@ fclose(fpin_ptr);
 /*-------DE/rand-to-best/1/bin-----------------------------------------------------------*/
 	 else if (strategy == 8) 
 	 { 
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {                       
-	       tmp[n] = tmp[n] + F*(bestit[n] - tmp[n]) + F*((*pold)[r1][n]-(*pold)[r2][n]);
+	     {
+	       tmp[i][n] = tmp[i][n] + F*(bestit[n] - tmp[i][n]) + F*((*pold)[r1][n]-(*pold)[r2][n]);
 	     }
 	     n = (n+1)%D;
            }
 	 }
 /*-------DE/best/2/bin--------------------------------------------------------------------*/
 	 else if (strategy == 9)
-	 {
-	   assignd(D,tmp,(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	 { 
+	   assignd(D,tmp[i],(*pold)[i]);
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
 	     {                       
-	       tmp[n] = bestit[n] +
+	       tmp[i][n] = bestit[n] + 
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     }
 	     n = (n+1)%D;
@@ -671,33 +749,72 @@ fclose(fpin_ptr);
 /*-------DE/rand/2/bin--------------------------------------------------------------------*/
 	 else
 	 { 
-	   assignd(D,tmp,(*pold)[i]);
+	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {
-	       tmp[n] = (*pold)[r5][n] + 
+	     {                       
+	       tmp[i][n] = (*pold)[r5][n] + 
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     }
 	     n = (n+1)%D;
            }
 	 }
-
+      } /*mpi: mutates tmp[][] */
 
 /*=======Trial mutation now in tmp[]. Test how good this choice really was.==================*/
 
-	 trial_cost = evaluate(D,tmp,&nfeval,argv[2]);  /* Evaluate new vector in tmp[] */
-
-	 if (trial_cost <= cost[i])   /* improved objective function value ? */
+      #ifndef MPI
+      for (i=0; i<NP; i++) /*mpi: */
+      {
+	nfeval++;
+	trial_cost[i] = evaluate(D,tmp[i],argv[2]);  /* Evaluate new vector in tmp[] */
+      }
+      #else /*mpi: Master code to call slave*/
+	//printf("NP=%d D=%d m=%d\n", NP, D, m);
+	for (i=0; i<(int)((NP/m)+1); i++) {
+		for (j=0; j<m; j++) { /* Send a message */
+			if ( (j+m*i) <= (NP-1) ) {
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+				//tmp[j+m*i][0] = j+m*i;     /* Put own identifier in the message */
+				//tmp[j+m*i][1] = ntasks + (j+m*i);        /* and total number of processes */
+				dest_id=j+1;            /* Destination address */
+				//printf("Sending message -%d- to machine -%d-\n", j+m*i, dest_id);
+				nfeval++;
+				//printf("Sending message %E %E to machine -%d-\n", tmp[j+m*i][0], tmp[j+m*i][1], dest_id);
+				//fflush(stdout);
+				err = MPI_Send(tmp[j+m*i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+				//err = MPI_Isend(tmp, D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
+				//MPI_Wait(&send_req, &status);
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+			}
+		}
+		for (j=0; j<m; j++) {
+			if ( (j+m*i) <= (NP-1) ) {
+				err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
+				//err = MPI_Irecv(tmp, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &recv_req);
+				//MPI_Wait(&recv_req, &status);
+				source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
+				trial_cost[source_id-1]=cost_mpi;
+				//printf("Received message %E from process %d\n", cost_mpi, source_id);
+				//printf("--- - ---\n");
+				//fflush(stdout);
+			}
+		}
+	}
+      #endif
+      for (i=0; i<NP; i++) /*mpi: evaluates returned cost*/
+      {
+	 if (trial_cost[i] <= cost[i])   /* improved objective function value ? */
 	 {                                  
-	    cost[i]=trial_cost;
-	    assignd(D,(*pnew)[i],tmp);
-	    if (trial_cost<cmin)          /* Was this a new minimum? */
+	    cost[i]=trial_cost[i];
+	    assignd(D,(*pnew)[i],tmp[i]);
+	    if (trial_cost[i]<cmin)          /* Was this a new minimum? */
 	    {                               /* if so...*/
-	       cmin=trial_cost;           /* reset cmin to new low...*/
+	       cmin=trial_cost[i];           /* reset cmin to new low...*/
 	       imin=i;
-	       assignd(D,best,tmp);           
+	       assignd(D,best,tmp[i]);           
 	    }                           
 	 }                            
 	 else
@@ -735,7 +852,7 @@ fclose(fpin_ptr);
 
       if (gen%refresh==1)   /* display after every refresh generations */
       { /* ABORT works only if conio.h is accepted by your compiler */
-	printf("\n\n                         PRESS ANY KEY TO ABORT"); 
+	printf("\n\n                         PRESS CTRL-C TO ABORT");
 	printf("\n\n\n Best-so-far cost funct. value=%-15.10g\n",cmin);
 
 	for (j=0;j<D;j++)
@@ -748,6 +865,7 @@ fclose(fpin_ptr);
       }
 
       fprintf(fpout_ptr,"nfeval=%ld   cmin=%-15.10g   cost-variance=%-10.5g\n",nfeval,cmin,cvar);
+      gen++;
    }
 /*=======================================================================*/
 /*=========End of iteration loop=========================================*/
@@ -756,7 +874,7 @@ fclose(fpin_ptr);
 /*-------Final output in file-------------------------------------------*/
 
 
-   trial_cost = evaluate(D,best,&nfeval,argv[2]);  /*call optimization with the best vector before leaving*/
+   trial_cost[0] = evaluate(D,best,argv[2]);  /*call optimization with the best vector before leaving*/
 
    fprintf(fpout_ptr,"\n\n\n Best-so-far obj. funct. value = %-15.10g\n",cmin);
 
@@ -786,7 +904,27 @@ fclose(fpin_ptr);
 
    fclose(fpout_ptr);
 
-   return(0);
+/*mpi: MPI termination*/
+	#ifdef MPI
+	/*Send exit signal to all*/
+	for (j=0; j<m; j++) {
+		i=0;
+		tmp[i][0] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
+		dest_id=j+1;		/* Destination address */
+		//printf("Sending TERMINATION message -%d- to machine -%d-\n", id, dest_id);
+		//fflush(stdout);
+		err = MPI_Send(tmp[i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+		//err = MPI_Isend(tmp, 2, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
+		//MPI_Wait(&send_req, &status);
+	}
+
+	//printf("Master exiting\n");
+	//fflush(stdout);
+	MPI_Finalize();
+	#endif
+/*mpi: MPI termination*/
+
+   return(EXIT_SUCCESS);
 }
 
 /*-----------End of main()------------------------------------------*/

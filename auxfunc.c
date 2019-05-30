@@ -204,9 +204,9 @@ void ReadKey(char *Result, char *key, FILE *stream)
 char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, char end_char, int compliance)
 {
 	char line_local[LONGSTRINGSIZE]; /*??further investigate the need of having a local copy*/
-	int i;
+	unsigned int i;
 	/*,k*/
-	int j;
+	unsigned int j;
 	char data[LONGSTRINGSIZE];
 
 	strcpy(line_local, line);
@@ -222,7 +222,7 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 		printf("auxfunc.c - ReadSubKey -- start_from is zero: %s\n", line);
 		exit(EXIT_FAILURE);
 	}
-	while (line_local[i - 1] != begin_char && i < strlen(line_local))
+	while ( (line_local[i - 1] != begin_char) && (i < strlen(line_local)) )
 		i++;
 
 	if (i != strlen(line_local))
@@ -230,7 +230,7 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 	else
 		j = i;
 
-	while (line_local[j - 1] != end_char && j < strlen(line_local))
+	while ( (line_local[j - 1] != end_char) && (j < strlen(line_local)) )
 		j++;
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -12,7 +12,7 @@
  * global variable declarations                            */
 
 
-#define COPYRIGHT       " (c) Joao Ramos 1999-2005. All Rights Reserved "
+#define COPYRIGHT       " (c) Joao Ramos 1999-2006. All Rights Reserved "
 #define VERSION         " "
 #define LONGSTRINGSIZE  256 /* */
 #define SHORTSTRINGSIZE  64 /* */
@@ -39,4 +39,4 @@ int P_eof(FILE *f);
 
 
 char lkk[LONGSTRINGSIZE];
-int spice; /*1:Eldo, 2:HPSPICE, 3:LTspice*/
+int spice; /* 1:Eldo, 2:HPSPICE, 3:LTspice, 4:Spectre */

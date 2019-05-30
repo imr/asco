@@ -93,7 +93,7 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
  */
 int DetectsTransistorColumns(char *lelement, int index[])
 {
-	int i=1, j=0;
+	unsigned int i=1, j=0;
 
 	switch(spice) {
 		case 1: /*Eldo*/
@@ -166,7 +166,7 @@ void DoMath(int num_measures)
 
 	for (i = 0; i <= num_measures; i++) {
 		sprintf(STR1, "%.4s", measure[i].search);
-		if (!strcmp(STR1, "math")) {   /*if a mathematical operation is requested, then*/
+		if (!strcasecmp(STR1, "math")) {   /*if a mathematical operation is requested, then*/
 			strcpy(lkk1, " ");
 			j=1;
 			while (*lkk1 != '\0') {
@@ -881,9 +881,9 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 /*
  * Receives "MEASURE_VAR" ASCII line and fills data in variable 'measure[i]'.
  */
- int ProcessMeasureVar(char *measure_var_line, int k, char *OutputFile)
+int ProcessMeasureVar(char *measure_var_line, int k, char *OutputFile)
 {
-	int a, b, c, i, j;
+	unsigned int a, b, c, i, j;
 	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE], lkk3[LONGSTRINGSIZE], laux[LONGSTRINGSIZE];
 	char STR1[LONGSTRINGSIZE];
 	/*char STR2[LONGSTRINGSIZE];*/
@@ -892,25 +892,25 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 
 /*------------------------------------------------------------------*/
 	i = 1;
-	j = strpos2(lkk, "$", 1); /*This will skip the characters after '$', the inline comment used by the sweep tools*/
+	j = strpos2(measure_var_line, "$", 1); /*This will skip the characters after '$', the inline comment used by the sweep tools*/
 	if (j != 0)
-		sprintf(lkk, "%.*s", (int)(j - 1), strcpy(STR1, lkk));
-	StripSpaces(lkk);
+		sprintf(measure_var_line, "%.*s", (int)(j - 1), strcpy(STR1, measure_var_line));
+	StripSpaces(measure_var_line);
 
-	ReadSubKey(measure[k].var_name, lkk, &i, ':', ':', 5);         /* var_name */
+	ReadSubKey(measure[k].var_name, measure_var_line, &i, ':', ':', 5);         /* var_name */
 	StripSpaces(measure[k].var_name);
-	ReadSubKey(lkk1, lkk, &i, ':', ':', 5);
+	ReadSubKey(lkk1, measure_var_line, &i, ':', ':', 5);
 	StripSpaces(lkk1);
 	if (!strcmp(lkk1,"SEARCH_FOR"))
-		ReadSubKey(measure[k].search, lkk, &i, '\'', '\'', 5); /* search */
+		ReadSubKey(measure[k].search, measure_var_line, &i, '\'', '\'', 5); /* search */
 
 	/*Is the current variable a transistor?*/
-	if ( strpos2(lkk, "SEARCH_FOR", 1) && (!strpos2(lkk, "S_COL", 1)) && strpos2(lkk, "P_LINE", 1) && (!strpos2(lkk, "P_COL", 1)) ) {
+	if ( strpos2(measure_var_line, "SEARCH_FOR", 1) && (!strpos2(measure_var_line, "S_COL", 1)) && strpos2(measure_var_line, "P_LINE", 1) && (!strpos2(measure_var_line, "P_COL", 1)) ) {
 	/*yes, it is a transistor*/
 		sprintf(STR3, "(%s)", measure[k].var_name);
 		strcpy(measure[k].var_name, STR3);
 
-		strsub(lkk1, lkk, strpos2(lkk, "P_LINE", 1) + 6, strlen(lkk));
+		strsub(lkk1, measure_var_line, strpos2(measure_var_line, "P_LINE", 1) + 6, strlen(measure_var_line));
 		Str2Lower(lkk1); /*Just to avoid crazy engineers*/
 		/* lkk1[0] = ','; */
 
@@ -974,7 +974,7 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 				if (b != 0)                                             /*we have to read text instead of a number*/
 					measure[k].line = CMOSText2Line(lkk2, OutputFile);
 				else
-					CMOSLine2Text(lkk, measure[k].line, OutputFile); /*we have to read a number instead of text*/
+					CMOSLine2Text(measure_var_line, measure[k].line, OutputFile); /*we have to read a number instead of text*/
 				measure[k].column1 = 1; /* In this way, the intermediate measure is not print */
 				measure[k].column2 = 0; /* in the summary.txt file, only the arithmetic value */
 				sprintf(STR1, "%s(%s)", lkk2, ReadSubKey(STR3, measure[k - c + 1].var_name, &b, '(', ')', 0));
@@ -1024,19 +1024,20 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 		k--; /*Corrects the number of measurements to do*/
 	} else {
 	/*no, it is not a transistor*/
-		Str2Lower(lkk);
-		j = strpos2(lkk, "math", 1);
+		strcpy(STR1, measure_var_line);
+		Str2Lower(STR1);
+		j = strpos2(STR1, "math", 1);
 		if (j == 0) { /*if equal to '0', we are reading a measurement*/
-			ReadSubKey(STR1, lkk, &i, ':', ':', 0);
-			j = (sscanf(ReadSubKey(STR1, lkk, &i, ':', ':', 5), "%d", &measure[k].s_column1) == 0); /* s_column1 */
-			ReadSubKey(STR1, lkk, &i, ':', ':', 5);
-			j = (sscanf(ReadSubKey(STR1, lkk, &i, ':', ':', 5), "%d", &measure[k].line) == 0);      /* line      */
-			ReadSubKey(STR1, lkk, &i, ':', ':', 5);
-			j = (sscanf(ReadSubKey(STR1, lkk, &i, ':', ':', 5), "%d", &measure[k].column1) == 0);   /* column1   */
-			j = (sscanf(ReadSubKey(STR1, lkk, &i, ':', ':', 4), "%d", &measure[k].column2) == 0);   /* column2   */
+			ReadSubKey(STR1, measure_var_line, &i, ':', ':', 0);
+			j = (sscanf(ReadSubKey(STR1, measure_var_line, &i, ':', ':', 5), "%d", &measure[k].s_column1) == 0); /* s_column1 */
+			ReadSubKey(STR1, measure_var_line, &i, ':', ':', 5);
+			j = (sscanf(ReadSubKey(STR1, measure_var_line, &i, ':', ':', 5), "%d", &measure[k].line) == 0);      /* line      */
+			ReadSubKey(STR1, measure_var_line, &i, ':', ':', 5);
+			j = (sscanf(ReadSubKey(STR1, measure_var_line, &i, ':', ':', 5), "%d", &measure[k].column1) == 0);   /* column1   */
+			j = (sscanf(ReadSubKey(STR1, measure_var_line, &i, ':', ':', 4), "%d", &measure[k].column2) == 0);   /* column2   */
 		} else { /*we will read a MATH line*/
 			 /*j holds the starting position of the MATH line*/
-			strsub(measure[k].search, lkk, (int)j, strlen(lkk));
+			strsub(measure[k].search, measure_var_line, (int)j, strlen(measure_var_line));
 		}
 	}
 /*------------------------------------------------------------------*/
@@ -1082,7 +1083,7 @@ int ReadDataFromConfigFile(char *ConfigFile, char *OutputFile)
 
 		k++;
 		if (k > (MAXMEAS-1)) {
-			printf("auxfunc_measurefromlis.c - ReadDataFromConfigFile -- Maximum number of %d measurements reached. Increase MAXMEAS in auxfunc_measurefromlis.h\n", MAXMEAS);
+			printf("auxfunc_measurefromlis.c - ReadDataFromConfigFile -- Cannot do more than %d MEASUREMENTS\n", MAXMEAS);
 			exit(EXIT_FAILURE);
 			/*Possible error exist, as 'k' can be greater than 75, while
 			 * continuing to read variables. The 'MOST variable extraction'
@@ -1116,7 +1117,7 @@ int ReadDataFromConfigFile(char *ConfigFile, char *OutputFile)
  */
 void ProcessOutputFile(char *OutputFile, int mem)
 {
-	int a, b, c, i, j, k, l;
+	int a, b=0, c, i, j, k, l;
 	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
 	char lprevious[LONGSTRINGSIZE], lnext[LONGSTRINGSIZE]; /*previous and next line in the simulation output file; lkk hold current line*/
 	char lelement[LONGSTRINGSIZE]; /*when a transistor is found, the line with its names is stored in here*/

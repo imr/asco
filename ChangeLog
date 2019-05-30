@@ -1,9 +1,20 @@
+ASCO 0.4.0: March 5, 2006
+   * Multiprocessor support
+   * Minor compilation/bug fixes.
+
+   Manual:
+   * Parallel processing documented
+   * No ALTER commands added should file 'alter.inc' exist
+
+
+
+
 ASCO 0.3.12: January 29, 2006
-   * RF module included 
+   * RF module included
    * Minor bug fixes
 
    Manual:
-   * RF module and examples describing the its usage included
+   * RF module and examples describing its usage included
    * Section 'Getting Started' explains text written by de36.c to stdout
 
 

@@ -1,5 +1,6 @@
 #
 CC = gcc
+CC_MPI = <FULL_PATH_TO_MPICH>/bin/mpicc
 CFLAGS = -Os
 
 
@@ -11,6 +12,9 @@ asco-test:
 
 asco:
 	$(CC) $(CFLAGS) -lm -o asco auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c asco.c
+
+asco-mpi:
+	$(CC_MPI) $(CFLAGS) -DMPI -lm -o asco-mpi auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c asco.c
 
 alter::
 	cd tools/alter/; make

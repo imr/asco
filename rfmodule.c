@@ -64,7 +64,7 @@ int ExtractDeviceValuePosition(char *line)
  */
 char *ReplaceSymbolRF(char *ret, double y_value)
 {
-	int i, k, ii;
+	unsigned int i, k, ii;
 	char laux[LONGSTRINGSIZE], inlinecomment[LONGSTRINGSIZE], lxp[LONGSTRINGSIZE];
 
 	k=inlinestrpos(ret);
@@ -720,7 +720,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 				}
 				if (x0_value == x_value) /* Special case when (x0_value = x_value), meaning */
 					prev++;          /* that it is equal to one of table extremes       */
-				if (prev==0) {           /*The following code exist due to numerical error defining how close x0_value == x_value */
+				if (prev==0) {           /* The following code exist due to numerical error defining how close x0_value == x_value */
 					if ((x0_value - x_value) < 1e-20) {
 						prev++;          /* that it is equal to one of table extremes  */
 						x_value=x0_value;
