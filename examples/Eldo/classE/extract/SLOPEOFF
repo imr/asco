@@ -1,0 +1,13 @@
+# Info #
+Name:SLOPEOFF
+Symbol:ZSLOPEOFF
+Unit:V/s
+Analysis type:TRAN
+Definition:Drain voltage slope before turn-on
+Note:
+#
+
+# Commands #
+.DEFMAC SLOPE(x,y,t)={abs(y-x)/t}
+.EXTRACT TRAN LABEL=#SYMBOL# {$SLOPE((YVAL(v(#NODE#), (TMEAS_AUX))),(YVAL(v(#NODE#),TMEAS_STOP)),((100-T_PERC)/100*INP_PERIOD))}
+#

@@ -1,0 +1,12 @@
+# Info #
+Name:DC gain
+Symbol:ZA0
+Unit:dB
+Analysis type:AC
+Definition:A0 = magnitude (in dB) at 10 Hz
+Note:
+#
+
+# Commands #
+.EXTRACT AC LABEL=#SYMBOL# YVAL(vdb(#NODE#),0.1)
+#

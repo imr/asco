@@ -1,0 +1,18 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Output power at the main frequency
+Note:
+#
+
+# Commands #
+.fft v(#NODE#) np=1024 start=5.7647e-08 stop=5.8824e-08 freq=850e6 fmin=840e6 fmax=860e6 format=unorm
+#
+
+# Post Processing #
+MEASURE_VAR:      fft: SEARCH_FOR:'  ******  fft analysis': S_COL:01: P_LINE:16: P_COL:37:47
+MEASURE_VAR:       rl: SEARCH_FOR:' .param filt_res ='
+MEASURE_VAR: #SYMBOL#: MATH:&fft: 2: *: ^: 2 : /: &rl: /:
+#

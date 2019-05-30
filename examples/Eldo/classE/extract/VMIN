@@ -1,0 +1,12 @@
+# Info #
+Name:VMIN
+Symbol:ZVMIN
+Unit:V
+Analysis type:TRAN
+Definition:Minimum voltage during turn-off period; used to detect oscillations.
+Note:
+#
+
+# Commands #
+.EXTRACT TRAN LABEL=#SYMBOL# MIN(v(#NODE#),TMEAS_STOP-(INP_PERIOD/2)*0.9,TMEAS_STOP)
+#

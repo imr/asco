@@ -1,0 +1,12 @@
+# Info #
+Name:Phase margin
+Symbol:ZPM
+Unit:deg
+Analysis type:AC
+Definition:PM = 180 deg + phase at UGF
+Note:
+#
+
+# Commands #
+.EXTRACT AC LABEL=#SYMBOL# 180+yval(vp(#NODE#), xdown(vdb(#NODE#),0))
+#

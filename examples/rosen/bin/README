@@ -1,0 +1,3 @@
+Compile and move the 'rosen' executable to the previous directory
+where it is used as a demonstration that ASCO can easily be used
+as a general optimizer. 

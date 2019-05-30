@@ -1,0 +1,13 @@
+# Info #
+Name:AMP3 Slew rate
+Symbol:ZSR
+Unit:V/s
+Analysis type:AC
+Definition:SR_CALC = GBW*pi*(VGS-VT)
+Note:
+#
+
+# Commands #
+.MEASURE AC UGF#SYMBOL# TRIG AT=1 TARG VDB(VOUT) VAL=0 FALL=1
+.MEASURE AC #SYMBOL# PARAM='UGF#SYMBOL#*3.14*(LX2(XOPAMP.M11)-LV9(XOPAMP.M11))'
+#

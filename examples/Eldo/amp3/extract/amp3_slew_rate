@@ -1,0 +1,12 @@
+# Info #
+Name:AMP3 Slew rate
+Symbol:ZSR
+Unit:V/s
+Analysis type:AC
+Definition:SR_CALC = GBW*pi*(VGS-VT)
+Note:
+#
+
+# Commands #
+.EXTRACT AC LABEL=#SYMBOL# {XDOWN(vdb(#NODE#),0.0)*3.14*ABS(vgs(XOPAMP.M11)-vt(XOPAMP.M11))}
+#

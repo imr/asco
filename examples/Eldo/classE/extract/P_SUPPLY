@@ -1,0 +1,13 @@
+# Info #
+Name:P_SUPPLY
+Symbol:ZP_SUPPLY
+Unit:W
+Analysis type:TRAN
+Definition:Power supply consumption
+Note:
+#
+
+# Commands #
+.DEFWAVE powerin = i(VDD)*V_SUPPLY
+.EXTRACT TRAN LABEL=#SYMBOL# RMS(w(powerin),TMEAS_START,TMEAS_STOP)
+#

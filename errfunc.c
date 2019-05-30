@@ -1,0 +1,608 @@
+/*
+ *  Copyright (C) 2004-2005 Joao Ramos
+ * Your use of this code is subject to the terms and conditions of the
+ * GNU general public license version 2. See "COPYING" or
+ * http://www.gnu.org/licenses/gpl.html
+ *
+ * Plug-in to add to 'Eldo', 'HSPICE' and 'LTSpice' circuit simulator optimization capabilities
+ *
+ */
+ 
+#include <stdio.h>
+//#include <ctype.h>
+#include <math.h>
+//#include <setjmp.h>
+//#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+
+#include "auxfunc.h"
+#include "auxfunc_alter.h"
+#include "auxfunc_monte.h"
+#include "initialize.h"
+#include "errfunc.h"
+#include "auxfunc_measurefromlis.h"
+
+
+
+
+/*
+ *  Checks if all constraints are met
+ */
+int AllConstraintsMet()
+{
+	int i,ii;
+
+	i=0;
+	ii=0;                                                   //used to know if all constraint are met
+	while (measurements[i].meas_symbol[0] != '\0') {
+		if (measurements[i].objective_constraint > 3) { //if it is a constraint: LE=4, GE=5, EQ=6
+			if (measurements[i].constraint_met)
+				i++;
+			else {
+				ii++;                           //at least one constraint not met
+				break;
+			}
+		} else {
+			i++;
+		}
+	}
+
+	if (ii)
+		return(0); //not all constraints are meet
+	else
+		return(1); //all constraints are meet
+}
+
+
+
+
+/*
+ * Compute cost for the current simulation
+ */
+double CostFunction()
+{
+	double cost=0; //total cost initialized to 0
+	int i=0;
+	double tolerance=0.01; //0.01=1%; 0.1=10%
+
+	while (measurements[i].meas_symbol[0] != '\0') {
+		switch (measurements[i].objective_constraint) {
+			case 1: //MIN                                           ===> objective (MIN)
+				measurements[i].constraint_met=0;                                        //because it is not a constraint
+				cost=cost + (Wobj*measurements[i].measured_value);
+				break;
+
+			case 2: //MAX                                           ===> objective (MAX)
+				measurements[i].constraint_met=0;                                        //because it is not a constraint
+				cost=cost + (1/(Wobj*measurements[i].measured_value));
+				break;
+
+			case 3: //MON                                           ===> monitor, do nothing
+				measurements[i].constraint_met=0;                                        //because it is not a constraint
+				break;
+
+			case 4: //LE                                            ===> constraint (LE)
+				measurements[i].constraint_met=1;                                        //assume that the constraint is met
+				if (measurements[i].measured_value <= measurements[i].constraint_value)
+					cost = cost;                                                     //no penalty
+				else {
+					if (measurements[i].constraint_value==0) {                       //special case when constraint==0
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value));
+					} else {
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value)
+								/ measurements[i].constraint_value);
+					}
+					measurements[i].constraint_met=0;                                //constraint not met
+				}
+				break;
+
+			case 5: //GE                                            ===> constraint (GE)
+				measurements[i].constraint_met=1;                                        //assume that the constraint is met
+				if (measurements[i].measured_value >= measurements[i].constraint_value)
+					cost = cost;                                                     //no penalty
+				else {
+					if (measurements[i].constraint_value==0) {                       //special case when constraint==0
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value));
+					} else {
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value)
+								/ measurements[i].constraint_value);
+					}
+					measurements[i].constraint_met=0;                                //constraint not met
+				}
+				break;
+
+			case 6: //EQ                                            ===> constraint (EQ)
+				measurements[i].constraint_met=1;                                        //assume that the constraint is met
+				if (measurements[i].constraint_value==0) {                               //special case when constraint==0
+					if ( (measurements[i].measured_value >= (-tolerance)) &&
+					     (measurements[i].measured_value <= (+tolerance)) )
+						cost = cost;                                             //no penalty
+					else {
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value));
+						measurements[i].constraint_met=0;                        //constraint not met
+					}
+				} else {
+					if ( (measurements[i].measured_value >= (measurements[i].constraint_value)*(1-tolerance)) &&
+					     (measurements[i].measured_value <= (measurements[i].constraint_value)*(1+tolerance)) )
+						cost = cost;                                             //no penalty
+					else {
+						cost=cost + Wcon*fabs((measurements[i].constraint_value  //penalty=Wcon
+								- measurements[i].measured_value)
+								/ measurements[i].constraint_value);
+						measurements[i].constraint_met=0;                        //constraint not met
+					}
+				}
+				break;
+
+			default:
+				printf("errfunc.c - CostFunction -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
+		}
+		i++;
+	}
+	return (cost);
+}
+
+
+
+
+/*
+ * Log current simulation results to file <hostname>.log
+ */
+int LogtoFile(double cost)
+{
+	int i, ii;
+	char laux[LONGSTRINGSIZE];
+
+	//   <hostname>.log
+	FILE *fspice_log;
+
+	char hostname[SHORTSTRINGSIZE] = {0};
+	int  ccode;
+	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
+		printf("errfunc.c - LogtoFile -- gethostname failed, ccode = %d\n", ccode);
+		exit(EXIT_FAILURE);
+	}
+	//printf("host name: %s\n", hostname);
+	ii=strpos2(hostname, ".", 1);
+	if (ii)                                 //hostname is "longmorn.xx.xx.xx"
+		hostname[ii-1]='\0';
+	//sprintf(laux, "%s.log", hostname);      //hostname is "longmorn"
+	switch(spice) {
+		case 1: //Eldo
+			sprintf(laux, "%s.log", hostname);      //hostname is "longmorn"
+			break;
+		case 2: //HSPICE
+			sprintf(laux, "%s.log", hostname);      //hostname is "longmorn"
+			break;
+		case 3: //LTspice
+			sprintf(laux, "%s.log.log", hostname);      //hostname is "longmorn"
+			break;
+		case 100: //ROSEN
+			sprintf(laux, "%s.log", hostname);      //hostname is "longmorn"
+			break;
+		default:
+			printf("errfunc.c - LogtoFile -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+	if ((fspice_log=fopen(laux,"at")) == 0) {
+		printf("errfunc.c - LogtoFile -- Cannot open log file: %s\n", laux);
+		exit(EXIT_FAILURE);
+	}
+
+	if (AllConstraintsMet())
+		fprintf(fspice_log, "+");                   //1- all constraints were met
+	else
+		fprintf(fspice_log, "-");                   //1- at least one constraint was not met
+
+	fprintf(fspice_log, "cost:%E:    ", cost);          //2- print 'cost'
+
+	i=0;
+	while (measurements[i].meas_symbol[0] != '\0') {   //3- print measurements
+		sprintf(laux, "%i", i);                    //to remove integer added in (*)
+		ii=strlen(laux);                           //to remove integer added in (*)
+		strcpy(laux, measurements[i].meas_symbol); //to remove integer added in (*)
+		laux[strlen(laux)-ii]='\0';                //to remove integer added in (*)
+		//measurements[i].meas_symbol[strlen(measurements[i].meas_symbol)-1]='\0'; //to remove integer added in (*)
+
+		if (measurements[i].objective_constraint > 3) { //if it is a constraint: LE=4, GE=5, EQ=6
+			if (measurements[i].constraint_met)     //constraint is met
+				fprintf(fspice_log, "%c", '+');
+			else                                    //constraint is not met
+				fprintf(fspice_log, "%c", '-');
+		}
+			fprintf(fspice_log, "%s:%E: ", laux, measurements[i].measured_value);
+			i++;
+	}
+
+	fprintf(fspice_log, "    ");
+	i=0;
+	while (parameters[i].symbol[0] != '\0') {           //4- print parameters
+		fprintf(fspice_log, "%s:%E:", parameters[i].symbol, parameters[i].value);
+		i++;
+	}
+
+	fprintf(fspice_log, "\n");                          //5- the end
+
+	fclose(fspice_log);  //might be wise not to be ALWAYS opening and closing this file
+
+	i=0;
+	while (measurements[i].meas_symbol[0] != '\0') {    //6- zero all previous measured values
+		measurements[i].measured_value=0;
+		i++;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+
+
+
+/*
+ * 
+ */
+void WriteToMem(int num_measures)
+{
+	int i, ii, j;
+	char laux[LONGSTRINGSIZE];
+	double currentcost;
+	
+	DoMath(num_measures);   /*'MATH=#...'; information is in the variable 'measured_data'*/
+	
+	i=1;
+	j=0;
+	
+	while (measure[i].search[0] != '\0') {
+		strcpy(laux, UNIQUECHAR);
+		ii=0;
+		ii=     strpos2(measure[i].var_name, laux, 1); //if UNIQUECHAR is inexisting in measure[i].var_name
+		Str2Lower(laux);
+		ii=ii + strpos2(measure[i].var_name, laux, 1); // and Str2Lower(UNIQUECHAR) as well, this means we are processing a line with "MEASURE_VAR"
+		if (ii) {
+			switch(spice) {
+				case 1: //Eldo
+					break;
+				case 2: //HSPICE
+					break;
+				case 3: //LTspice
+					//Str2Lower(laux);
+					ii=strpos2(measure[i].data, "=", 1);                         // LTSpice measurement format is different than Eldo and HSPICE
+					if (ii) {                                                    // so specific code is added in here to cope with the difference
+						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); //
+						strcpy(measure[i].data, laux);                       //
+					}
+					break;
+				case 100: //ROSEN
+					break;
+				default:
+					printf("errfunc.c - WriteToMem -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
+			}
+			strcpy(laux, UNIQUECHAR);
+			ii=strlen(laux);
+			strsub(laux, measure[i].var_name, ii+1, LONGSTRINGSIZE);             //1- find output measure variable
+										             //   by copying the last part of the string starting from UNIQUECHAR
+			j=0;
+			while (strcasecmp(laux, measurements[j].meas_symbol)) {              //2- get its order in measurements[i]
+				if (measurements[j].meas_symbol[0] == '\0') { //if symbol is not found
+					printf("errfunc.c - WriteToMem -- Symbol from SPICE simulation not found in memory: %s\n", laux);
+					exit(EXIT_FAILURE);
+				}
+				j++;
+			}
+	
+			strcpy(laux, measure[i].data);                                       //3- read measurement
+			StripSpaces(laux);
+	
+			measurements[j].measured_value=asc2real(laux, 1, (int)strlen(laux)); //4- convert it to double
+		}
+		i++;
+	}
+
+//----------------------------------------------------------------------------
+	//
+	//Step5: find cost
+	currentcost=CostFunction();
+	if (maxcost<currentcost)
+		maxcost=currentcost;
+
+
+	//
+	//Step6: save log information to file <hostname>.log
+	if (LOG) {
+		LogtoFile(currentcost);
+	}
+//----------------------------------------------------------------------------
+}
+
+
+
+
+/*
+ * This is the main function
+ *      1: scale input parameters from [-10, +10] to fit within desired range values
+ *      2: read from <hostname>.tmp and write to <hostname>.*
+ *      3: execute 'SPICE <hostname>.*'
+ *      4: read output <hostname>.out
+ *      5: find cost
+ *      6: save log information to file <hostname>.log
+ *      7: ALTER and MC simulation
+ *      8: return cost
+ */
+double errfunc(char *filename, double *x)
+{
+	//double currentcost; //total cost
+	int i, ii;
+	char laux[LONGSTRINGSIZE];
+
+	//   <hostname>.*    <hostname>.out  <hostname>.tmp
+	FILE *fspice_input,  *fspice_output, *fspice_tmp;
+
+
+	//
+	//Step1: scale input parameters from [-10, +10] to fit within desired range values
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step1\n");
+	#endif
+	for (i = 0; i < MAXPARAMETERS; i++) {
+		if (parameters[i].format) {
+			parameters[i].value = scaleto(x[i], -10, +10, parameters[i].minimum, parameters[i].maximum, parameters[i].format);
+			if (parameters[i].value<0) {
+				ii=1;
+				//printf("INFO:  errfunc.c - Step1 -- Negative values\n");
+			}
+		}
+	}
+
+
+	//
+	//Step2: read from <hostname>.tmp and write to <hostname>.*
+	//
+	//??it is not necessary to check every time for the possibility to read/write. Move to initicialization if possible??
+	//
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step2\n");
+	#endif
+	char hostname[SHORTSTRINGSIZE] = {0};
+	int  ccode;
+	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
+		printf("errfunc.c - Step2 -- gethostname failed, ccode = %d\n", ccode);
+		exit(EXIT_FAILURE);
+	}
+	//printf("host name: %s\n", hostname);
+	ii=strpos2(hostname, ".", 1);
+	if (ii)                                 //hostname is "longmorn.xx.xx.xx"
+		hostname[ii-1]='\0';
+	sprintf(lkk, "%s%s", hostname, ".tmp"); //hostname is "longmorn"
+	if ((fspice_tmp =fopen(lkk  ,"rt")) == 0) {   //netlist to simulate given by "hostname"
+		printf("errfunc.c - Step2 -- Cannot read from tmp file: %s\n", lkk);
+		exit(EXIT_FAILURE);
+	}
+	switch(spice) {
+		case 1: //Eldo
+			sprintf(lkk, "%s%s", hostname, ".cir");
+			break;
+		case 2: //HSPICE
+			sprintf(lkk, "%s%s", hostname, ".sp");
+			break;
+		case 3: //LTspice
+			sprintf(lkk, "%s%s", hostname, ".net");
+			break;
+		case 100: //ROSEN
+			sprintf(lkk, "%s%s", hostname, ".dat");
+			break;
+		default:
+			printf("errfunc.c - Step2 -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+	if ((fspice_input =fopen(lkk  ,"wt")) == 0) {   //netlist to simulate given by 'hostname'
+		printf("errfunc.c - Step2 -- Cannot write to output file: %s\n", lkk);
+		exit(EXIT_FAILURE);
+	}
+
+	fgets2(lkk, LONGSTRINGSIZE, fspice_tmp);       //read and
+	fprintf(fspice_input, "%s\n", lkk); //write the first line
+	while (!P_eof(fspice_tmp)) {
+		fgets2(lkk, LONGSTRINGSIZE, fspice_tmp);
+
+		// ***** -------------- *********** -------------- *****
+		// ***** -------------- ** BEGIN ** -------------- *****
+		if (lkk[0]!='*') {
+			ii=0;
+			ReadSubKey(laux, lkk, &ii, '#', '#', 0);
+			if (laux[0]=='\0') {                                //does it contains #<text>#?
+				if (strlen(lkk))
+					fprintf(fspice_input, "%s\n", lkk); //no, write line to <hostname>.*
+			} else {                                            //yes, replace #<text># in this line
+				ReplaceSymbol(lkk, 1);
+				fprintf(fspice_input, "%s\n", lkk);         //write line to <hostname>.*
+			}
+		}
+		// ***** -------------- **  END  ** -------------- *****
+		// ***** -------------- *********** -------------- *****
+
+	}
+	fclose(fspice_input);
+	fclose(fspice_tmp);
+
+
+	//
+	//Step3: execute 'SPICE <hostname>.*'
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step3\n");
+	#endif
+	switch(spice) {
+		case 1: //Eldo
+			sprintf(lkk, "eldo %s.cir > %s.out", hostname, hostname);
+			break;
+		case 2: //HSPICE
+			sprintf(lkk, "hspice %s.sp -o %s.lis > /dev/null", hostname, hostname);
+			break;
+		case 3: //LTspice
+			sprintf(lkk, "ltspice %s.net > /dev/null", hostname);
+			break;
+		case 100: //ROSEN
+			sprintf(lkk, "./rosen %s.dat %s.out", hostname, hostname);
+			break;
+		default:
+			printf("errfunc.c - Step3 -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+	system(lkk);
+
+
+	//
+	//Step4: read output <hostname>.out, find maxcost and save log information to file <hostname>.log
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step4\n");
+	#endif
+	switch(spice) {
+		case 1: //Eldo
+			sprintf(lkk, "%s.out", hostname);
+			break;
+		case 2: //HSPICE
+			sprintf(lkk, "%s.lis", hostname);
+			break;
+		case 3: //LTspice
+			sprintf(lkk, "%s.log", hostname);
+			break;
+		case 100: //ROSEN
+			sprintf(lkk, "%s.out", hostname);
+			break;
+		default:
+			printf("errfunc.c - Step4 -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
+	maxcost=0;
+	#ifdef DEBUG
+	ProcessOutputFile(lkk, 3); //=>3:mem+file.
+	#else
+	ProcessOutputFile(lkk, 1); //=>1:mem
+	#endif
+
+//	//
+//	//Step5: find cost
+//	#ifdef DEBUG
+//	printf("DEBUG: errfunc.c - Step5\n");
+//	#endif
+//	currentcost=CostFunction();
+//	if (maxcost<currentcost)
+//		maxcost=currentcost;
+
+
+//	//
+//	//Step6: save log information to file <hostname>.log
+//	#ifdef DEBUG
+//	printf("DEBUG: errfunc.c - Step6\n");
+//	#endif
+//	if (LOG) {
+//		LogtoFile(currentcost);
+//	}
+
+
+	//
+	//Step7: ALTER and MC simulation
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step7\n");
+	#endif
+	if ( ((AllConstraintsMet()) || (AlterMCmincost > maxcost)) && (AlterMC)) {
+
+		switch (AlterMC) {
+			case 1: //Monte Carlo simulation
+				// bla bla bla
+				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
+
+				//   <hostname>.log
+				FILE *fspice_log;
+				sprintf(laux, "%s.log", hostname);
+				if ((fspice_log=fopen(laux,"at")) == 0) {
+					printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
+					exit(EXIT_FAILURE);
+				}
+				fprintf(fspice_log, "Alter: 1 - altermc=%d\n", AlterMC);
+				fclose(fspice_log);
+
+char filename_x[SHORTSTRINGSIZE] = {0};
+strcpy (filename_x, filename);
+				strcat(filename_x, ".cfg");
+				sprintf(lkk, "%s%s", hostname, ".tmp"); //hostname is "longmorn"
+				sprintf(laux, "%s%s", hostname, ".mc"); //hostname is "longmorn"
+				MonteCarlo(filename_x, lkk, laux);      //execute the 'monte' tool
+
+				sprintf(lkk, "%s%s", hostname, ".mc");  //hostname is "longmorn"
+				if ((fspice_input =fopen(lkk  ,"rt")) == 0) { //netlist to simulate given by "hostname"
+					printf("errfunc.c - Step7 -- Cannot read from mc file: %s\n", lkk);
+					exit(EXIT_FAILURE);
+				}
+				sprintf(lkk, "%s%s", hostname, ".tmp");
+				if ((fspice_output =fopen(lkk  ,"wt")) == 0) {   //netlist to simulate given by 'hostname'
+					printf("errfunc.c - Step7 -- Cannot write to tmp file: %s\n", lkk);
+					exit(EXIT_FAILURE);
+				}
+
+				while (!P_eof(fspice_input)) { //reads from <hostname>.mc and writes to <hostname>.tmp
+					fgets2(lkk, LONGSTRINGSIZE, fspice_input); //read line from <hostname>.mc
+					strcpy(laux, lkk);
+					Str2Lower(laux);
+					fprintf(fspice_output, "%s\n", lkk);       //write line to <hostname>.tmp
+				}
+
+				fclose(fspice_input);
+				fclose(fspice_output);
+
+				AlterMC=AlterMC-1; //decrease by one; nothing more will be executed
+				break;
+
+			case 2: //Alter simulation - variable 'AlterMC'=2
+			case 3: //Alter simulation - variable 'AlterMC'=3 and will execute a MonteCarlo simulation afterwards
+				// bla bla bla
+				//
+				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
+
+				//   <hostname>.log
+				//FILE *fspice_log;
+				sprintf(laux, "%s.log", hostname);
+				if ((fspice_log=fopen(laux,"at")) == 0) {
+					printf("errfunc.c - Step7 -- Cannot open log file: %s\n", laux);
+					exit(EXIT_FAILURE);
+				}
+				fprintf(fspice_log, "Alter: 2 - altermc=%d\n", AlterMC);
+				fclose(fspice_log);
+
+				sprintf(lkk, "%s%s", hostname, ".tmp"); //hostname is "longmorn"
+				if ((fspice_tmp =fopen(lkk  ,"r+t")) == 0) { //netlist to simulate given by "hostname"
+					printf("errfunc.c - Step7 -- Cannot read from tmp file: %s\n", lkk);
+					exit(EXIT_FAILURE);
+				}
+strcpy (filename_x, filename);
+				strcat(filename_x, ".cfg");
+				CreateALTERinc(filename_x, lkk, 1); //execute the 'alter' tool
+				fseek(fspice_tmp, 0, SEEK_END); //properly position the pointer
+				fprintf(fspice_tmp, ".end\n");  //add ".end"
+				fclose(fspice_tmp);
+
+				AlterMC=AlterMC-2; //decrease by two; it will not execute a Monte Carlo simulation next time if equal to zero
+				break;
+
+			default:
+				printf("errfunc.c - Step7 -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
+		}
+	}
+
+
+	//
+	//Step8: return maximum cost (ALTER on MONTECARLO)
+	#ifdef DEBUG
+	printf("DEBUG: errfunc.c - Step8\n");
+	#endif
+	return (maxcost);
+}

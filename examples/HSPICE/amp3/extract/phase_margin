@@ -1,0 +1,13 @@
+# Info #
+Name:Phase margin
+Symbol:ZPM
+Unit:deg
+Analysis type:AC
+Definition:PM = 180 deg + phase at UGF
+Note: 
+#
+
+# Commands #
+.MEASURE AC phase#SYMBOL# FIND VP(VOUT) WHEN VDB(VOUT)=0
+.MEASURE AC #SYMBOL# PARAM='180+phase#SYMBOL#'
+#

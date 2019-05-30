@@ -1,0 +1,12 @@
+# Info #
+Name:Unity gain frequency
+Symbol:ZUGF
+Unit:Hz
+Analysis type:AC
+Definition:UGF = frequency where gain dropped to 1=0 dB
+Note:
+#
+
+# Commands #
+.EXTRACT AC LABEL=#SYMBOL# XDOWN(vdb(#NODE#),0)
+#

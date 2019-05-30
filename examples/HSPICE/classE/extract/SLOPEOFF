@@ -1,0 +1,12 @@
+# Info #
+Name:SLOPEOFF
+Symbol:ZSLOPEOFF
+Unit:V/s
+Analysis type:TRAN
+Definition:Drain voltage slope before turn-on
+Note:
+#
+
+# Commands #
+.measure tran #SYMBOL# deriv v(#NODE#) at='tmeas_aux-(inp_period/2)'
+#

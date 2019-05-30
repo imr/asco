@@ -1,0 +1,14 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:asd asd asd asd
+Note:asd asd asd asd
+#
+
+# Commands #
+#
+
+MEASURE_VAR:   #SYMBOL#: SEARCH_FOR:' Best-so-far obj. funct. value ='
+#

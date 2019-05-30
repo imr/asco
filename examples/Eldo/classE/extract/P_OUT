@@ -1,0 +1,14 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Output power at the main frequency
+Note:
+#
+
+# Commands #
+.OPTFOUR TSTART=TMEAS_START TSTOP=TMEAS_STOP NBPT=1024
+.FOUR LABEL=fftout v(#NODE#)
+.EXTRACT FOUR LABEL=#SYMBOL# {((YVAL(FOUR(fftout), INP_FREQ))^2)/(2*FILT_RES)}
+#
