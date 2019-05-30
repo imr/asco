@@ -8,5 +8,5 @@ Note:current to supply times the supply voltage
 #
 
 # Commands #
-.EXTRACT AC LABEL=#SYMBOL# {ABS{I(#NODE#)*V(#NODE#)}}
+.EXTRACT DCAC LABEL=#SYMBOL# {ABS{I(#NODE#)*V(#NODE#)}}
 #

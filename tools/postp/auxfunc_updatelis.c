@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2010 Joao Ramos
+ * Copyright (C) 1999-2012 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -29,7 +29,7 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
 	double vgs, vds, vth, vdsat;
 	char laux[LONGSTRINGSIZE], llaux[LONGSTRINGSIZE], lOpRegion[LONGSTRINGSIZE], lVovd[LONGSTRINGSIZE], lVds_Vdsat[LONGSTRINGSIZE]; /*char lines with 'operating region', 'overdrive voltage' and 'vds-vdsat voltage'*/
 	int PrintNoSat;
-	int index[10]; /*up to 10 columns with transistors can exist in the outpu file; considered enough*/
+	int index[10]; /*up to 10 columns with transistors can exist in the output file; considered enough*/
 	char STR1[LONGSTRINGSIZE];
 	char STR2[LONGSTRINGSIZE];
 
@@ -40,20 +40,20 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
 	strcpy(lVds_Vdsat, "Vds-Vdsat:   ");
 	for (i = 1; i <= j; i++) {
 		/* extra verifications */
-		strsub(llaux, lelement, (int)index[i - 1], (int)(index[i] - index[i - 1]));
-		StripSpaces(llaux);
+		strsub(laux, lelement, (int)index[i - 1], (int)(index[i] - index[i - 1]));
+		StripSpaces(laux);
 
 		vgs = asc2real(lVGS, index[i - 1], index[i] - 1);
 		vth = asc2real(lVth, index[i - 1], index[i] - 1);
 		if (vth>0) { /* if it is an NMOS transistor, vgs>0*/
 			if (vgs<0) {
 				strcat(lOpRegion, "WRONG NMOS BIAS? :");     /*Vgs should be > 0*/
-				fprintf(*fNoSat, "?%s ", llaux); /*??/LIN  or  OFF; vds<vdsat*/
+				fprintf(*fNoSat, "?%s ", laux); /*??/LIN  or  OFF; vds<vdsat*/
 			}
-		} else {
+		} else {     /* if it is an PMOS transistor, vgs<0*/
 			if (vgs>0) {
 				strcat(lOpRegion, "WRONG PMOS BIAS? :");     /*Vgs should be < 0*/
-				fprintf(*fNoSat, "?%s ", llaux); /*??/LIN  or  OFF; vds<vdsat*/
+				fprintf(*fNoSat, "?%s ", laux); /*??/LIN  or  OFF; vds<vdsat*/
 			}
 		}
 		/* extra verifications */
@@ -102,15 +102,15 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
 
 		/*those transistor not in SI/SAT will be printed to 'NOSAT.TXT' file*/
 		if (PrintNoSat == TRUE) {
-			strsub(llaux, lelement, (int)index[i - 1], (int)(index[i] - index[i - 1]));
-			StripSpaces(llaux);
+			strsub(laux, lelement, (int)index[i - 1], (int)(index[i] - index[i - 1]));
+			StripSpaces(laux);
 			if (vds > vdsat + Vdst)   
-				fprintf(*fNoSat, "%s ", llaux);          /*WI/SAT  or  OFF*/
+				fprintf(*fNoSat, "%s ", laux);          /*WI/SAT  or  OFF*/
 			else {
 				if (vds > vdsat)
-					fprintf(*fNoSat, "#%s ", llaux); /*??/LIN  or  OFF; vdsat<vds<vdsat+Vdst*/
+					fprintf(*fNoSat, "#%s ", laux); /*??/LIN  or  OFF; vdsat<vds<vdsat+Vdst*/
 				else
-					fprintf(*fNoSat, "*%s ", llaux); /*??/LIN  or  OFF; vds<vdsat*/
+					fprintf(*fNoSat, "*%s ", laux); /*??/LIN  or  OFF; vds<vdsat*/
 			}
 		}
 
@@ -144,7 +144,7 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
  */
 void UpdateLIS(char *ConfigFile, char *InputFile)
 {
-	int i, k;
+	int i, j, k;
 	char ltitle[LONGSTRINGSIZE];          /*title: found .alter @*/
 	char lelement[LONGSTRINGSIZE];
 	/*lmodel,*/                /*transistor/model name*/
@@ -187,6 +187,9 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 
 
 	ReadKey(lkk, "SKIP_NOSAT", fsweepINI);
+	j = strpos2(lkk, "$", 1);
+	if (j != 0) /*This will skip the characters after '$', the inline comment used by the sweep tools*/
+		lkk[j-1]='\0';
 	StripSpaces(lkk);
 	k = 1;
 	if (!lkk[0])
@@ -206,6 +209,9 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 				}
 			}
 			ReadKey(lkk, "SKIP_NOSAT", fsweepINI);
+			j = strpos2(lkk, "$", 1);
+			if (j != 0) /*This will skip the characters after '$', the inline comment used by the sweep tools*/
+				lkk[j-1]='\0';
 			StripSpaces(lkk);
 		}
 	}
@@ -302,10 +308,10 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 
-						if (strpos2(lkk, "region", 1) !=0) { /* Due to HSPICE 2001.2 line */
-							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							fprintf(fLJR, "%s\n", lkk);  /* with the operation region */
-						}
+						//if (strpos2(lkk, "region", 1) !=0) { /* Due to HSPICE 2001.2 line */
+						//	fgets2(lkk, LONGSTRINGSIZE, fLIS);
+						//	fprintf(fLJR, "%s\n", lkk);  /* with the operation region */
+						//}
 
 						/* fgets2(lkk, LONGSTRINGSIZE, fLIS); */
 						/* fprintf(fLJR, "%s\n", lkk); */
@@ -488,7 +494,11 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 			case 4: /* Spectre */
 				// in input.scs put "dcOp dc oppoint=logfile"
 				// run spectre with "spectre input.scs =log input.lis"
-				while ((strcmp((sprintf(laux, "%.35s", lkk), laux), "Operating-Point Information `dcOp'") != 0) & (!P_eof(fLIS))) {
+				//
+				// Code specific for "Primitive: bsim3v3" and is quite possible
+				// not to work on future Spectre versions and other transistor models
+				//
+				while ((strcmp((sprintf(laux, "%.31s", lkk), laux), "operating-point information `dc") != 0) & (!P_eof(fLIS))) {
 					fgets2(lkk, LONGSTRINGSIZE, fLIS);
 					fprintf(fLJR, "%s\n", lkk);
 					StripSpaces(lkk);   /*required due to Solaris OS*/
@@ -496,6 +506,7 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fNoSat, "%s | ", lkk);
 						strcpy(ltitle, lkk);
 					}
+					Str2Lower(lkk); //required because versions until 2007 have "... Information" and after have "... information"
 				}
 
 				if (P_eof(fLIS))
@@ -503,7 +514,8 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 				char l1[LONGSTRINGSIZE], l2[LONGSTRINGSIZE]; /*l1 and l2 are hold places for previous lines*/
 				fgets2(l1, LONGSTRINGSIZE, fLIS); fprintf(fLJR, "%s\n", l1);
 				fgets2(l2, LONGSTRINGSIZE, fLIS); fprintf(fLJR, "%s\n", l2);
-				while ((strcmp((sprintf(laux, "%.19s", lkk), laux), "Primitive: bsim3v3") != 0) & (!P_eof(fLIS))) {
+/*bsim3v3*/			while ((strcmp((sprintf(laux, "%.18s", lkk), laux), "Primitive: bsim3v3") != 0) & (!P_eof(fLIS))) {
+/*bsim4*/ //			while ((strcmp((sprintf(laux, "%.16s", lkk), laux), "Primitive: bsim4") != 0) & (!P_eof(fLIS))) {
 					strcpy(l1, l2);
 					strcpy(l2, lkk);
 					fgets2(lkk, LONGSTRINGSIZE, fLIS);
@@ -515,16 +527,23 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 					}
 				}
 				
-				sprintf(laux, "%.19s", lkk);
-				if (!strcmp(laux, "Primitive: bsim3v3")) {
+/*bsim3v3*/			sprintf(laux, "%.18s", lkk);
+/*bsim3v3*/			if (!strcmp(laux, "Primitive: bsim3v3")) {
+/*bsim4*/ //			sprintf(laux, "%.16s", lkk);
+/*bsim4*/ //			if (!strcmp(laux, "Primitive: bsim4")) {
 					for (i = 1; i <= 0; i++) {
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 					}
 
-					while (strpos2(lkk, "Primitive: bsim3v3", 1) != 0) {   /*find operating region for all transistors*/
+/*bsim3v3*/				while (strpos2(lkk, "Primitive: bsim3v3", 1) != 0) {   /*find operating region for all transistors*/
+/*bsim4*/ //				while (strpos2(lkk, "Primitive: bsim4", 1) != 0) {   /*find operating region for all transistors*/
 						strcpy(lelement, l1);
-						for (i = 1; i <= 9; i++) {
+						if (strpos2(lelement, " of ", 1)) { /*to remove the library name if and when it appears*/
+							lelement[strpos2(lelement, " of ", 1)]='\0';
+						}
+/*bsim3v3*/					for (i = 1; i <= 9; i++) {
+/*bsim4*/ //					for (i = 1; i <= 7; i++) {
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
@@ -532,13 +551,13 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fgets2(lVGS, LONGSTRINGSIZE, fLIS);   /*Vgs*/
 						fprintf(fLJR, "%s\n", lVGS);
 						{
-						i=1; ReadSubKey(laux, lVGS, &i, '=', 'V', 0);
+						i=1; ReadSubKey(laux, lVGS, &i, '=', 'V', 5);
 						i=strpos2(laux, " ", 2);
 						if ((laux[i]==109)) { /* 109=m; mV */
 							laux[i-1]='\0';
 							strcat(laux, "e-3");
 						}
-						if ((laux[i]==117)) { /* 109=m; uV */
+						if ((laux[i]==117)) { /* 117=u; uV */
 							laux[i-1]='\0';
 							strcat(laux, "e-6");
 						}
@@ -546,18 +565,18 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 							laux[i-1]='\0';
 							strcat(laux, "e-9");
 						}
-						strcpy(lVGS, laux);
+						sprintf(lVGS, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
 						}
 						fgets2(lVDS, LONGSTRINGSIZE, fLIS);   /*Vds*/
 						fprintf(fLJR, "%s\n", lVDS);
 						{
-						i=1; ReadSubKey(laux, lVDS, &i, '=', 'V', 0);
+						i=1; ReadSubKey(laux, lVDS, &i, '=', 'V', 5);
 						i=strpos2(laux, " ", 2);
 						if ((laux[i]==109)) { /* 109=m; mV */
 							laux[i-1]='\0';
 							strcat(laux, "e-3");
 						}
-						if ((laux[i]==117)) { /* 109=m; uV */
+						if ((laux[i]==117)) { /* 117=u; uV */
 							laux[i-1]='\0';
 							strcat(laux, "e-6");
 						}
@@ -565,20 +584,34 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 							laux[i-1]='\0';
 							strcat(laux, "e-9");
 						}
-						strcpy(lVDS, laux);
+						sprintf(lVDS, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
 						}
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 						fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
 						fprintf(fLJR, "%s\n", lVth);
+					{ //begin -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
+						if (!strpos2(lVth, "vth =", 1)) {
+							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
+							fprintf(fLJR, "%s\n", lVth);
+							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
+							fprintf(fLJR, "%s\n", lVth);
+							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
+							fprintf(fLJR, "%s\n", lVth);
+						}
+						if (!strpos2(lVth, "vth =", 1)) { /*Double-check just to be sure that vth was found*/
+								printf("auxfunc_updatelis.c - Spectre netlist format not supported\n");
+								exit(EXIT_FAILURE);
+						}
+					} //end -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
 						{
-						i=1; ReadSubKey(laux, lVth, &i, '=', 'V', 0);
+						i=1; ReadSubKey(laux, lVth, &i, '=', 'V', 5);
 						i=strpos2(laux, " ", 2);
 						if ((laux[i]==109)) { /* 109=m; mV */
 							laux[i-1]='\0';
 							strcat(laux, "e-3");
 						}
-						if ((laux[i]==117)) { /* 109=m; uV */
+						if ((laux[i]==117)) { /* 117=u; uV */
 							laux[i-1]='\0';
 							strcat(laux, "e-6");
 						}
@@ -586,18 +619,18 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 							laux[i-1]='\0';
 							strcat(laux, "e-9");
 						}
-						strcpy(lVth, laux);
+						sprintf(lVth, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
 						}
 						fgets2(lVDSAT, LONGSTRINGSIZE, fLIS); /*Vdsat*/
 						fprintf(fLJR, "%s\n", lVDSAT);
 						{
-						i=1; ReadSubKey(laux, lVDSAT, &i, '=', 'V', 0);
+						i=1; ReadSubKey(laux, lVDSAT, &i, '=', 'V', 5);
 						i=strpos2(laux, " ", 2);
 						if ((laux[i]==109)) { /* 109=m; mV */
 							laux[i-1]='\0';
 							strcat(laux, "e-3");
 						}
-						if ((laux[i]==117)) { /* 109=m; uV */
+						if ((laux[i]==117)) { /* 117=u; uV */
 							laux[i-1]='\0';
 							strcat(laux, "e-6");
 						}
@@ -605,13 +638,24 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 							laux[i-1]='\0';
 							strcat(laux, "e-9");
 						}
-						strcpy(lVDSAT, laux);
+						sprintf(lVDSAT, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
 						}
 
 						for (i = 1; i <= 45; i++) {
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
+					{ //begin -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
+						fgets2(lkk, LONGSTRINGSIZE, fLIS);
+						//fprintf(fLJR, "%s\n", lkk);
+						//if ((int)(strlen(InputFile))) { /*empty line has been found, goes ahead*/
+						//	i=0;
+						//}
+						while (strpos2(lkk, " = ", 1)) { /*empty line has been found, goes ahead*/
+							fprintf(fLJR, "%s\n", lkk);
+							fgets2(lkk, LONGSTRINGSIZE, fLIS);
+						}
+					} //end -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
 
 						DoCalculations(lelement, lVGS, lVDS, lVth, lVDSAT, Vovd, Voff, Vdst, stats, &fNoSat); /*gets three lines with operating region*/
 						fprintf(fLJR, "%s\n", stats[0]);
@@ -619,24 +663,28 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fLJR, "%s\n\n", stats[2]);
 
 
-						for (i = 1; i <= 4; i++) {
+
+						for (i = 1; i <= 3; i++) {
 							strcpy(l1, l2);
 							strcpy(l2, lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							if (i > 1)
-							fprintf(fLJR, "%s\n", lkk);
+							if (i > 0)
+								fprintf(fLJR, "%s\n", lkk);
 						}
 
 					}
 					putc('\n', fNoSat);
 				}
 				break;
+			case 50: /*Qucs*/
+				printf("auxfunc_updatelis.c - UpdateLIS -- Updatelis not implemente for Qucs\n");
+				exit(EXIT_FAILURE);
 			case 100: /* rosen */
 				printf("auxfunc_updatelis.c - UpdateLIS -- Updatelis not implemente for rosen\n");
 				exit(EXIT_FAILURE);
 				break;
 			default:
-				printf("auxfunc_updatelis.c - Something unexpected has happened!\n");
+				printf("auxfunc_updatelis.c - UpdateLIS -- Something unexpected has happened!\n");
 				exit(EXIT_FAILURE);
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2006 Joao Ramos
+ * Copyright (C) 1999-2011 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -12,16 +12,17 @@
  * global variable declarations                            */
 
 
-#define COPYRIGHT       "Copyright (c) 1999-2006 Joao Ramos"
+#define COPYRIGHT       "Copyright (c) 1999-2011 Joao Ramos"
 #define GPL_INFO        "This program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details."
-#define LONGSTRINGSIZE  65535 /* */
-#define SHORTSTRINGSIZE    64 /* */
+#define LONGSTRINGSIZE  4096 /* */
+#define SHORTSTRINGSIZE   64 /* */
 #define TRUE  1
 #define FALSE 0
 
 
 
 
+void InsertString(char *ret, char *data, int a, int b);
 int extended2engineer(double *num);
 double asc2real(char *lstring_,int startIndex,int endIndex);
 void Str2Upper(char *data);

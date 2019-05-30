@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2010 Joao Ramos
+ * Copyright (C) 2004-2011 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -99,16 +99,13 @@ double CostFunction()
 				measurements[i].constraint_met=0;                                        /*because it is not a constraint*/
 				cost=cost + (Wobj*measurements[i].measured_value);
 				break;
-
 			case 2: /*MAX                                           ===> objective (MAX)*/
 				measurements[i].constraint_met=0;                                        /*because it is not a constraint*/
 				cost=cost + (1/(Wobj*measurements[i].measured_value));
 				break;
-
 			case 3: /*MON                                           ===> monitor, do nothing*/
 				measurements[i].constraint_met=0;                                        /*because it is not a constraint*/
 				break;
-
 			case 4: /*LE                                            ===> constraint (LE)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
 				if (measurements[i].measured_value <= measurements[i].constraint_value)
@@ -125,7 +122,6 @@ double CostFunction()
 					measurements[i].constraint_met=0;                                /*constraint not met*/
 				}
 				break;
-
 			case 5: /*GE                                            ===> constraint (GE)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
 				if (measurements[i].measured_value >= measurements[i].constraint_value)
@@ -142,7 +138,6 @@ double CostFunction()
 					measurements[i].constraint_met=0;                                /*constraint not met*/
 				}
 				break;
-
 			case 6: /*EQ                                            ===> constraint (EQ)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
 				if (!fcmp(measurements[i].constraint_value, 0)) {                         /*special case when constraint==0*/
@@ -166,7 +161,6 @@ double CostFunction()
 					}
 				}
 				break;
-
 			default:
 				printf("errfunc.c - CostFunction -- Something unexpected has happened!\n");
 				exit(EXIT_FAILURE);
@@ -285,7 +279,7 @@ void LogtoFile(double cost)
 /*
  *
  */
- #ifdef ASCO
+#ifdef ASCO
 void WriteToMem(int num_measures)
 {
 	int i, ii, j;
@@ -293,42 +287,38 @@ void WriteToMem(int num_measures)
 	double currentcost;
 
 	i=1; /*It must start with 1*/
-	while (measure[i].search[0] != '\0') {
-
-
-			switch(spice) {
-				case 1: /*Eldo*/
-					break;
-				case 2: /*HSPICE*/
-					break;
-				case 3: /*LTspice*/
-					/*Str2Lower(laux);*/
-					ii=strpos2(measure[i].data, "=", 1);                         /* LTspice measurement format is different than Eldo and HSPICE  */
-					if (ii) {                                                    /* so specific code is added in here to cope with the difference */
-						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
-						strcpy(measure[i].data, laux);                       /*                                                               */
-						if (strpos2(laux, "dB,", 1)) {                               /*Is the measurement a complex AC signal?*/
-							ii=1;
-							if (strpos2(measure[i].search, "phase", 1))
-								ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); /*measure the AC phase    */
-							else
-								ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0);  /*measure the AC magnitude*/
-							strcpy(measure[i].data, laux);
-						}
+	while (measure[i].search[0] != '\0') { /*LTspice special case*/
+		switch(spice) {
+			case 1: /*Eldo*/
+				break;
+			case 2: /*HSPICE*/
+				break;
+			case 3: /*LTspice*/
+				/*Str2Lower(laux);*/
+				ii=strpos2(measure[i].data, "=", 1);                         /* LTspice measurement format is different than Eldo and HSPICE  */
+				if (ii) {                                                    /* so specific code is added in here to cope with the difference */
+					strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
+					strcpy(measure[i].data, laux);                       /*                                                               */
+					if (strpos2(laux, "dB,", 1)) {                               /*Is the measurement a complex AC signal?*/
+						ii=1;
+						if (strpos2(measure[i].search, "phase", 1))
+							ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); /*measure the AC phase    */
+						else
+							ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0);  /*measure the AC magnitude*/
+						strcpy(measure[i].data, laux);
 					}
-					break;
-				case 4: /*Spectre*/
-					break;
-				case 50: /*Qucs*/
-					break;
-				case 100: /*general*/
-					break;
-				default:
-					printf("errfunc.c - WriteToMem -- Something unexpected has happened!\n");
-					exit(EXIT_FAILURE);
-			}
-
-
+				}
+				break;
+			case 4: /*Spectre*/
+				break;
+			case 50: /*Qucs*/
+				break;
+			case 100: /*general*/
+				break;
+			default:
+				printf("errfunc.c - WriteToMem -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
+		}
 		i++;
 	}
 	DoMath(num_measures); /*'MATH=&...'; information is in the variable 'measured_data'*/
@@ -376,6 +366,10 @@ void WriteToMem(int num_measures)
 
 			if (!fcmp(measurements[j].measured_value, 0)) {                      /*5- check NaN and other text strings                               */
 				if ((laux[0] < 43) || (laux[0] > 57) ) /*if its text*/
+					if (measurements[j].objective_constraint == 1) /*1=MIN*/
+						measurements[j].measured_value=+1e+30; /*so that a large cost is later assigned*/
+					if (measurements[j].objective_constraint == 2) /*2=MAX*/
+						measurements[j].measured_value=-1e+30; /*so that a large cost is later assigned*/
 					if (measurements[j].objective_constraint == 4) /*4=LE*/
 						measurements[j].measured_value=+1e+30; /*so that a large cost is later assigned*/
 					if (measurements[j].objective_constraint > 4)  /*5=GE, 6=EQ*/
@@ -745,7 +739,6 @@ strcpy (filename_x, filename);
 
 				AlterMC=AlterMC-1; /*decrease by one; nothing more will be executed*/
 				break;
-
 			case 2: /*Alter simulation - variable 'AlterMC'=2*/
 			case 3: /*Alter simulation - variable 'AlterMC'=3 and will execute a MonteCarlo simulation afterwards*/
 				/* bla bla bla*/
@@ -786,7 +779,6 @@ strcpy (filename_x, filename);
 
 				AlterMC=AlterMC-2; /*decrease by two; it will not execute a Monte Carlo simulation next time if equal to zero*/
 				break;
-
 			default:
 				printf("errfunc.c - Step7 -- Something unexpected has happened!\n");
 				exit(EXIT_FAILURE);

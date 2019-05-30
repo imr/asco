@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007 Joao Ramos
+ * Copyright (C) 2004-2012 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -30,11 +30,57 @@
 
 
 /*
+ * generate Exx number multiplier, e-series
+ */
+double getevalue(int value,int eseries)
+{
+	double e24[] = {1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1};
+	double result;
+	int tmpa, tmpb;
+
+	tmpa = value/eseries;
+	tmpb = value%eseries;
+	if (tmpb<0) {
+		tmpb+=eseries;
+		tmpa--;
+	}
+
+	/* fprintf(stderr,"WARN: initialize.c - getevalue1 -- value: %d eseries: %d tmpa: %d tmpb: %d\n",value,eseries,tmpa,tmpb); */
+
+	switch (eseries) {
+		case 3:
+		case 6:
+		case 12:
+			tmpb *=2;
+		case 24:
+			result = e24[tmpb];
+			break;
+		case 48:
+		case 96:
+		case 192:
+			tmpa -=2; /* rounding hack */
+			result = round( pow(10,(double)tmpb/((double)eseries)+2) );
+			break;
+		default:
+			result = pow(10,(double)tmpb/((double)eseries));
+			/* printf("WARN: initialize.c - getevalue -- no known E series\n"); */
+			break;
+	}
+
+	/* printf("WARN: initialize.c - getevalue2 -- result: %e\n",pow(10,tmpa) * result); */
+	return pow(10,tmpa) * result;
+}
+
+
+
+
+/*
  * receives a number between [ina, inb] and scales it to be within [outa, outb]
  */
 double scaleto(double value, double ina, double inb, double outa, double outb, int format)
 {
 	double result;
+	double tmpa,tmpb;
 
 	if (!fcmp(inb, ina)) {
 		printf("initialize.c - scaleto -- 'ina' and 'inb' cannot be equal\n");
@@ -45,7 +91,7 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 		printf("INFO:  initialize.c - scaleto -- 'outa' and 'outb' are equal\n");
 	#endif
 
-	switch (format) {
+	switch (format & 0xFF) {
 		case 1: /*LIN_DOUBLE*/
 			result = ( (outb-outa)*value/(inb-ina)  +  (outa*inb - ina*outb)/(inb-ina) );
 			break;
@@ -80,6 +126,23 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 			outb=ceil(outb);  /*Convert to INTEGER, just in case*/
 			result = exp(log(outa) + (value-ina)/(inb-ina) * (log(outb)-log(outa)));
 			result = rint(result); /*Convert final result to INTEGER*/
+			break;
+		case 8: /* EEE */
+			if (outa < 0) {
+				printf("initialize.c - scaleto -- 'outa' cannot be negative in E series\n");
+				exit(EXIT_FAILURE);
+			}
+			if (outb < 0) {
+				printf("initialize.c - scaleto -- 'outb' cannot be negative in E series\n");
+				exit(EXIT_FAILURE);
+			}
+			tmpa=ceil(  ((double)(format>>8))*log10(outa) );  /* stay within limits */
+			tmpb=floor( ((double)(format>>8))*log10(outb) );
+			outa = getevalue((int)tmpa,format>>8); /* prevent precision problems */
+			outb = getevalue((int)tmpb,format>>8);
+			result = ( (tmpb-tmpa)*value/(inb-ina)  +  (tmpa*inb - ina*tmpb)/(inb-ina) );
+			result = getevalue((int)rint(result),format>>8);
+			/* fprintf(stderr,"initialize.c - scaleto 1b -- touta: %e toutb: %e result: %e\n",tmpa,tmpb,result); */
 			break;
 		default:
 			printf("initialize.c - scaleto -- Something unexpected has happened!\n");
@@ -118,7 +181,7 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 void ReplaceSymbol(char *ret, int optimize)
 {
 	int i, k, ii;
-	char laux[LONGSTRINGSIZE], inlinecomment[LONGSTRINGSIZE], lxp[LONGSTRINGSIZE];
+	char laux[LONGSTRINGSIZE], inlinecomment[LONGSTRINGSIZE] /*, lxp[LONGSTRINGSIZE]*/;
 
 	k=inlinestrpos(ret);
 	inlinecomment[0]='\0';
@@ -140,20 +203,23 @@ void ReplaceSymbol(char *ret, int optimize)
 			i++;
 		}
 
-		strsub(laux, ret, ii+1, (int)strlen(ret)-ii);    /*copies the last part of the string to laux*/
-		/*ret[strpos2(ret, "#", 1)-1]='\0';*/             /*properly finishes the string*/
-		ret[ii-(int)strlen(parameters[i].symbol)-2]='\0'; /*properly finishes the string*/
+//		strsub(laux, ret, ii+1, (int)strlen(ret)-ii);    /*copies the last part of the string to laux*/
+//		/*ret[strpos2(ret, "#", 1)-1]='\0';*/             /*properly finishes the string*/
+//		ret[ii-(int)strlen(parameters[i].symbol)-2]='\0'; /*properly finishes the string*/
 
 		if (optimize==0) { /*optimize=0 : we are initializing*/
 			if (parameters[i].optimize==0)
-				sprintf(lxp, "%E", parameters[i].value);   /*writes the value*/
+				sprintf(laux, "%E", parameters[i].value);   /*writes the value*/
 			else
-				sprintf(lxp, "#%s#",parameters[i].symbol); /*writes the #<symbol>#  back again*/
+				sprintf(laux, "#%s#",parameters[i].symbol); /*writes the #<symbol>#  back again*/
 		} else {           /*optimize=1 : we are optimizing*/
-			sprintf(lxp, "%E", parameters[i].value);           /*writes the value*/
+			sprintf(laux, "%E", parameters[i].value);           /*writes the value*/
 		}
-		strcat(ret, lxp);
-		strcat(ret, laux);
+
+InsertString(ret, laux, (ii-(int)strlen(parameters[i].symbol)-1), ii+1);
+
+//		strcat(ret, lxp);
+//		strcat(ret, laux);
 		ii++; /*because 'ReadSubKey' starts at [ii-1] instead of [ii]*/
 		ReadSubKey(laux, ret, &ii, '#', '#', 0);
 	}
@@ -326,6 +392,15 @@ int initialize(char *filename) /* , double *x) */
 				}
 
 				ReadSubKey(laux, lkk, &ii, ':', ':', 5);                    /*format  */
+				if (laux[0] == 'E') {
+					char IEC60063[] = " 3 6 12 24 48 96 192 ";
+					strsub(laux2, laux, 2, 4);      /*To keep with existing format of xxx_ while adding support for IEC 60063*/
+					sprintf(laux, "EEE_%s", laux2); /*preferred number series for resistors, capacitors and inductors        */
+					if (!strpos2(IEC60063, laux2, 1)) { /*Only E3, E6, E12, E24, E48, E96 and  E192 are allowed.*/
+						printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
+						exit(EXIT_FAILURE);
+					}
+				}
 				if (laux[3] != 95) { /* 95="_" */
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
@@ -336,6 +411,8 @@ int initialize(char *filename) /* , double *x) */
 					parameters[i].format=0;
 				if (!strcmp(laux2, "LOG"))
 					parameters[i].format=2;
+				if (!strcmp(laux2, "EEE"))
+					parameters[i].format=8;
 				if (parameters[i].format==-1) { /*validation*/
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
@@ -362,6 +439,8 @@ int initialize(char *filename) /* , double *x) */
 						printf("INFO:  initialize.c - Step2 -- Minimum and Maximum are equal in line: '%s'\n", lkk);
 					} */
 				}
+				if (parameters[i].format==8)
+					parameters[i].format=parameters[i].format+(((int)asc2real(laux2, 1, (int)strlen(laux2)))<<8);
 				if (parameters[i].format==0) {  /*validation*/
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
@@ -439,8 +518,8 @@ int initialize(char *filename) /* , double *x) */
 				measurements[i].constraint_value=asc2real(laux, 1, (int)strlen(laux)); /*constraint_value*/
 
 				i++;
-				if (i > MAXMEASUREMENTS) {
-					printf("initialize.c - Step3 -- Maximum number of measurements reached (>%d). Increase MAXMEASUREMENTS in initialize.h\n",MAXMEASUREMENTS);
+				if (i > MAXMEASUREMENTS-1) {
+					printf("initialize.c - Step3 -- Maximum number of measurements reached (>%d). Increase MAXMEASUREMENTS in initialize.h\n", MAXMEASUREMENTS);
 					exit(EXIT_FAILURE);
 				}
 			}
@@ -707,6 +786,9 @@ int initialize(char *filename) /* , double *x) */
 	/*---------------------------------------------------------------*/
 		fseek(fextract, 0, SEEK_SET);
 		ReadKey(lkk, "MEASURE_VAR", fextract);
+		{                        
+		measure[0].search[0]=10;/*"ProcessOutputFile", line 1231: makes data to read not found on measure[0]*/
+		}
 		ii=1;
 		while ((*measure[ii].var_name) != '\0') /* finds the proper entry */
 			ii++;                           /* place. Store in 'ii'   */

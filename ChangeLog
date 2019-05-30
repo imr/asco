@@ -1,3 +1,17 @@
+ASCO 0.4.8: February 27, 2012
+   * The 'postp' tool better supports Spectre
+   * Support for Spectre in the 'alter' tool
+   * Support for IEC 60063 preferred number series for resistors, capacitors and
+     inductors (E3, E6, E12, E24, E48, E96 and  E192).
+   * Code clean-up
+
+   Manual:
+   * 'alter' supports Spectre
+   * Support for IEC 60063
+
+
+
+
 ASCO 0.4.7: August 1, 2010
    * Corrected multiprocessor optimization algorithm message truncation error
      related to MPI_SCATTERV function

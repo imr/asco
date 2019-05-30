@@ -1,14 +1,14 @@
 *Chebyshev Band Pass Filter
 
 *** *** FILTER CIRCUIT *** ***
-C1 (1 0) capacitor c=#C1#
-L1 (1 0) inductor  l=#L1#
+C1 (1 0) capacitor c=#C1# // #CSMD_50p80p#
+L1 (1 0) inductor  l=#L1# // #LBOND_350p450p#
 
-L2 (1 2) inductor  l=#L2#
-C2 (2 3) capacitor c=#C2#
+L2 (1 2) inductor  l=#L2# // #LBOND_60n100n#
+C2 (2 3) capacitor c=#C2# // #CSMD_300f340f#
 
-C3 (3 0) capacitor c=#C3#
-L3 (3 0) inductor  l=#L3#
+C3 (3 0) capacitor c=#C3# // #CSMD_50p80p#
+L3 (3 0) inductor  l=#L3# // #LBOND_350p450p#
 
 
 *** *** PORT EMULATION *** ***

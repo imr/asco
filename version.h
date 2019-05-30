@@ -1,1 +1,1 @@
-#define VERSION         "ASCO-0.4.7"
+#define VERSION         "ASCO-0.4.8"

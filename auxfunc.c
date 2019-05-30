@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2007 Joao Ramos
+ * Copyright (C) 1999-2011 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -414,6 +414,8 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 	if (strpos2(lstring, "-", 2))                              /*                 */
 		if (!strpos2(lstring, "e-", 1))                    /*                 */
 			return 0;                                  /*                 */
+	if (strpos2(lstring, " ", 1))                              /*'                */
+		return 0;                                          /*                 */
 	if ((lstring[0] < 48) || (lstring[0] > 57) )               /* '0'=48 ... '9'=57 */
 		if ((lstring[0] != 43) && (lstring[0] != 45) )     /* '+'=43     '-'=45 */
 			return 0;                                  /*                   */
@@ -530,3 +532,25 @@ int extended2engineer(double *num)
 	}
 	return i;
 } /*extended2engineer*/
+
+
+
+
+/*
+ * Inserts in string 'ret' the content from 'data' at 
+ * starting position 'a' until end position 'b'
+ * a=1,b=1 => insert at position 1
+ * a=1,b=2 => replace char at position 1
+ * a=1,b=3 => replace string within position [1,2]
+ */
+void InsertString(char *ret, char *data, int a, int b)
+{
+	char begin[LONGSTRINGSIZE], end[LONGSTRINGSIZE];
+	
+	{
+		strsub(begin, ret, 1, a-1);
+		strsub(end,   ret, b, (int)strlen(ret));
+
+		sprintf(ret, "%s%s%s", begin, data, end);
+	}
+}
