@@ -67,7 +67,7 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 		ii=1;
 		/*printf("errfunc.c - scaleto -- Error: negative values\n");*/
 	}
-		
+
 	return(result);
 }
 
@@ -137,10 +137,10 @@ void DecodeSymbolNode(char *ret, int i)
 {
 	int ii;
 	char laux[LONGSTRINGSIZE];
-	
+
 	ii=1;
-	ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-	while (ii<=(int)strlen(lkk)) {
+	ReadSubKey(laux, ret, &ii, '#', '#', 0);
+	while (ii<=(int)strlen(ret)) {
 		Str2Lower(laux);
 		if (!strcmp(laux, "symbol"))
 			ii=ii+1000;                   /*is a "symbol" and encode this information by adding '1000'*/
@@ -152,21 +152,21 @@ void DecodeSymbolNode(char *ret, int i)
 		}
 
 		if (ii>1000)
-			strsub(laux, lkk, ii-1000+1, (int)strlen(lkk)-(ii-1000)); /*copies the last part of the string to laux*/
+			strsub(laux, ret, ii-1000+1, (int)strlen(ret)-(ii-1000)); /*copies the last part of the string to laux*/
 		else
-			strsub(laux, lkk, ii+1, (int)strlen(lkk)-ii);             /*copies the last part of the string to laux*/
-		lkk[strpos2(lkk, "#", 1)-1]='\0';                            /*properly finishes string                  */
+			strsub(laux, ret, ii+1, (int)strlen(ret)-ii);             /*copies the last part of the string to laux*/
+		ret[strpos2(ret, "#", 1)-1]='\0';                            /*properly finishes string                  */
 		if (ii>1000) {
 			ii=ii-1000;
-			strcat(lkk, UNIQUECHAR);                  /* unique sequence added to the symbol*/
-			strcat(lkk, measurements[i].meas_symbol); /* adds the symbol or... */
-			/* strcat(lkk, " "); not necessary anymore (*) */
+			strcat(ret, UNIQUECHAR);                  /* unique sequence added to the symbol*/
+			strcat(ret, measurements[i].meas_symbol); /* adds the symbol or... */
+			/* strcat(ret, " "); not necessary anymore (*) */
 		} else
-			strcat(lkk, measurements[i].node);        /* ...adds the node       */
+			strcat(ret, measurements[i].node);        /* ...adds the node       */
 
-		strcat(lkk, laux);
+		strcat(ret, laux);
 		ii=1;
-		ReadSubKey(laux, lkk, &ii, '#', '#', 0);
+		ReadSubKey(laux, ret, &ii, '#', '#', 0);
 	}
 }
 

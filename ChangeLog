@@ -1,3 +1,15 @@
+ASCO 0.4.4: August 30, 2006
+   * Dynamic load balancing in parallel differential evolution (DE) algorithm
+   * More patches to compile nativley in win32 using MinGW32
+   * Minor bug fixes
+
+   Manual:
+   * 'Work distribution method', 'Building in win32' and  'Optimization
+      algorithms', subsections added
+
+
+
+
 ASCO 0.4.3: July 1, 2006
    * Qucs simulator is supported
    * Better Ctrl-C handling when using MPI

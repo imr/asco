@@ -7,7 +7,7 @@
  * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
- 
+
 #include <stdio.h>
 /* #include <ctype.h> */
 #include <math.h>
@@ -22,6 +22,7 @@
 #include <sys/wait.h>
 #else
 #include <winsock2.h>
+#define SIGQUIT 3
 #endif
 
 
@@ -279,7 +280,7 @@ void LogtoFile(double cost)
 
 
 /*
- * 
+ *
  */
 void WriteToMem(int num_measures)
 {

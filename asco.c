@@ -46,6 +46,7 @@ extern int NM(int argc, char *argv[]);
  *      3: Initialization of all variables and strucutres
  *      4: Call optimization routine
  *      5: If in parallel optimization mode, copy back the log file to the starting directory
+ *      6: Rename output files, currently only for Qucs
  *
  */
 int main(int argc, char *argv[])
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
 	}
 	#endif
 /*mpi: MPI initialization*/
-	if (argc != 3) { /* number of arguments */
+	if (argc < 3) { /* number of arguments */
 		printf("\nUsage : asco -<simulator> <inputfile>\n");
 		printf("\nExamples:\n");
 		printf("          asco -eldo    <inputfile>.cir\n");
@@ -113,7 +114,24 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	/* printf("host name: %s\n", hostname); */
-	ii=strpos2(argv[2], ".", 1);
+	ii=strpos2(hostname, ".", 1);
+	if (ii)                                 /* hostname is "longmorn.xx.xx.xx" */
+		hostname[ii-1]='\0';
+	/*                                   */ /* hostname is "longmorn" */
+
+	strcpy(lkk, argv[2]);
+	ii=strpos2(lkk, "/", 1);
+	if (ii) {           /*should character '/' exist, files are in a different directory*/
+		ii=strlen(lkk);
+		while (lkk[ii--] != 47) {} /* 47="/" */
+		ii++;
+
+		lkk[ii+1]='\0';
+		chdir(lkk); /*now, change directory                                         */
+	}
+	else
+		ii=1;
+	ii=strpos2(argv[2], ".", ii);
 	if (ii) /* filename is "filename.xx.xx" */
 		argv[2][ii-1]='\0';
 	if (*argv[1] == 45) /* 45="-" */
@@ -182,7 +200,7 @@ int main(int argc, char *argv[])
 		sprintf(lkk, "cp -rfp * %s> /dev/null", optimizedir);
 		system(lkk);
 
-	chdir(optimizedir);
+		chdir(optimizedir);
 	}
 	#endif
 
@@ -248,22 +266,22 @@ int main(int argc, char *argv[])
 	if (id) { /*If it is a slave process*/
 		switch(spice) {
 			case 1: /*Eldo*/
-				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 2: /*HSPICE*/
-				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 3: /*LTspice*/
-				sprintf(lkk, "cp -fp %s.log.log %s/%s_%d.log.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log.log %s/%s_%d.log.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 4: /*Spectre*/
-				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 50: /*Qucs*/
-				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 100: /*general*/
-				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			default:
 				printf("errfunc.c -- Something unexpected has happened!\n");
@@ -277,6 +295,26 @@ int main(int argc, char *argv[])
 		/* chdir(currentdir); */
 	}
 	#endif
+
+
+	/**/
+	/*Step6: Rename output files, currently only for Qucs*/
+	#ifdef MPI
+	if (id==0) { /*Only for Master process*/
+	#else
+	{
+	#endif
+		if ((spice==50) && (argc==5) ) { /*Qucs*/
+			sprintf(lkk, "cp -fp %s.dat %s.dat > /dev/null", hostname, argv[4]);
+			system(lkk); /*copy simulation output file*/
+			sprintf(lkk, "cp -fp %s.log %s.log > /dev/null", hostname, argv[4]);
+			system(lkk); /*copy log file*/
+		}
+	}
+
+
+	/**/
+	/**/
 	if (MPI_EXXIT==0) { /*Cannot print in MPI if Ctrl-C has been pressed because SSH is immediatly killed*/
 		printf("INFO:  ASCO has ended on '%s'.\n", hostname);
 		fflush(stdout);

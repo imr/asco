@@ -43,7 +43,7 @@
 ** ftp.icsi.berkeley.edu/pub/techreports/1995/tr-95-012.ps.Z  **
 ** or via WWW: http://http.icsi.berkeley.edu/~storn/litera.html*
 ** A more extended version of tr-95-012.ps is submitted for   **
-** publication in the Journal Evolutionary Computation.       ** 
+** publication in the Journal Evolutionary Computation.       **
 **                                                            **
 ** You may use this program for any purpose, give it to any   **
 ** person or change it according to your needs as long as you **
@@ -79,6 +79,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#ifdef __MINGW32__
+#include <windows.h>
+#define SIGQUIT 3
+#define sleep(seconds)    Sleep(seconds*1000)
+#endif
 
 
 #include "de.h"
@@ -86,7 +91,8 @@
 #include "initialize.h"
 #ifdef MPI
 #include "mpi.h"
-#define MPI_METHOD 2 /*1:Send or 2:Scatter*/
+#define MPI_METHOD 3 /*1:Send, 2:Scatter or 3:Scatter with load balacing*/
+#include <time.h>
 #endif
 
 /*------------------------Macros----------------------------------------*/
@@ -189,6 +195,130 @@ double rnd_uni(long *idum)
 
 
 
+#ifdef MPI
+/*
+ * equalizes the time each process takes to finish the given number of
+ * simulations to decrease the optimization time, i.e., load balancing
+ */
+void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, int ntasks, int NP, double cost[])
+{
+	int i, j, k;
+	double t_min[2]={0, 1.7976931348623157e+308}; /*fastest process: index and minimum value for minimum_simulation_time*/
+	double t_dif, total_time=0;
+	double t_avg[MAXPOP];
+	int out_of_bound[MAXPOP]={0}; /*total number of out-of-bound simulations in each process*/
+	static double t_avg_ofb[MAXPOP]={0}; /*average time, to use should all simulations are out-of-bound*/
+
+
+	/**/
+	/*Step1: for each process, finds how many simulations were out-of-bound*/
+	for (i=1; i<ntasks; i++) {
+		k=0;
+		for (j=0; j<i; j++)
+			k=k+(sendcount[j]/MAXDIM);
+
+		for (j=0; j<(sendcount[i]/MAXDIM); j++) {
+			if (cost[j+k]>1e50)        /*The value 1e50 is related to the value in Step2 from file 'evaluate.c'*/
+				out_of_bound[i]++; /*some miscalculations of out-of-bound for process 'i' are possible     */
+		}
+	}
+
+
+	/**/
+	/*Step2: Calculates average simulation time in each process*/
+	for (i = 1; i < ntasks; i++) {
+	/*finds minimum value for average_simulation_time**/
+		t_dif = difftime(t_end[i], t_start[0]);
+		if (t_dif<1)
+			t_dif=1; /*number '1' is just avoid special case when t_dif=0; happens for very fast simulations*/
+
+		if ((sendcount[i]/MAXDIM) > out_of_bound[i]) { /*if at least one simulation was in-bound*/
+			t_avg[i]=t_dif/(sendcount[i]/MAXDIM - out_of_bound[i]); /* average_simulation_time in each process*/
+			if (t_avg_ofb[i]<1) /*'first time' detection, coupled with 'special case' above*/
+				t_avg_ofb[i]=t_avg[i];
+			else
+				t_avg_ofb[i]=(t_avg_ofb[i] + t_avg[i])/2; /*update historic average time*/
+		} else
+			t_avg[i]=t_avg_ofb[i];                    /*use historic average value   */
+
+		if (t_avg[i] < t_min[1]) {
+			t_min[0] = i;        /*index position*/
+			t_min[1] = t_avg[i]; /*set new minimum time per simulation*/
+		}
+	}
+
+	/*total time, equal to the sum of all the previous avg values*/
+	total_time=0;
+	for (i = 1; i < ntasks; i++) {
+		total_time=total_time + 1/(t_avg[i]/t_min[1]);
+	}
+
+
+	/**/
+	/*Step3: Calculates new sendcount, in two steps, using information obtained in Step1 and Step2*/
+	j=0;
+	/*Step3.1: initial guess*/
+	for (i = 1; i < ntasks; i++) {
+		sendcount[i]=(int)rint((NP/total_time) * (1/(t_avg[i]/t_min[1]))); /*New proposal for sendcount*/
+		/*if (sendcount[i]==0)  */
+		/*	sendcount[i]=1; */ /*at least one is to be simulated on each process*/
+		j=j+sendcount[i];
+	}
+
+	/*Step3.2: correct sendcount with previous 'j' value*/
+	j=NP-j; /*if positive, add; if negative, subtract*/
+	/* Adding the penalty only to the fastest process is not the best method. */
+	/* An improved solution is to spreed the penalty among all the fastest    */
+	/* processes such as each one of them simulate one more simulation        */
+	if (j>0)
+		sendcount[(int)t_min[0]]=sendcount[(int)t_min[0]]+j; /*add to the fastest process*/
+	else {
+		if ( abs(j) <= abs(sendcount[(int)t_min[0]]) ) /*error, i.e. 'j', is larger than sendcount[i] which implies*/
+			sendcount[(int)t_min[0]]=sendcount[(int)t_min[0]]+j; /*subtract from the fastest process*/
+		else {                                         /*that panic mode correction  must be used                  */
+			for (i=1; i<=abs(j); i++) {
+				if (sendcount[i]) /*decreases only if sendcount[i]>='1'*/
+					sendcount[i]--;
+			}
+		}
+	}
+
+	/*Step3.3: verification*/
+	j=0;
+	for (i = 1; i < ntasks; i++) {
+		j=j+sendcount[i];
+	}
+	if ((NP-j)!=0) {
+		printf("de36.c - LoadBalancer -- 'sendcount' is not yet correct!\n");
+		printf("de36.c - LoadBalancer -- This should never have happened.\n");
+		printf("de36.c - LoadBalancer -- Contact the ASCO developer.\n");
+		fflush(stdout);
+		exit(EXIT_FAILURE); /*exits if not correct at this point*/
+	}
+
+	/*Step3.4: corrects for MAXDIM size*/
+	for (i=0; i<ntasks; i++) {
+		sendcount[i]=sendcount[i]*MAXDIM;
+	}
+
+
+	/**/
+	/*Step4: At this poit, 'sendcount' is correct, now create displs*/
+	/*Fills 'displs'*/
+	displs[0]=0; /* master */
+	displs[1]=0; /* slave number 1 */
+	for (i=2; i<ntasks; i++) {
+		displs[i]=sendcount[i-1] + displs[i-1];
+	}
+
+
+	/**/
+	/*Step5: Everything is done!*/
+}
+#endif
+
+
+
 int DE(int argc, char *argv[])
 /**C*F****************************************************************
 **                                                                  **
@@ -279,9 +409,11 @@ int DE(int argc, char *argv[])
 	const int tag = 42;	        /* Message tag */
 	const int root = 0;         /* Root process in scatter */
 	MPI_Status status;
-	MPI_Request send_req, recv_req;    /* Request object for send and receive */
+	/* MPI_Request send_req, recv_req; */ /* Request object for send and receive */
 	int id, ntasks, source_id, dest_id, err;
 	double cost_mpi; /* Message array */
+	time_t t_start[MAXPOP], t_end[MAXPOP]; /*evaluates time each process spend simulating*/
+	double t_dif;
 	int sendcount[MAXPOP], displs[MAXPOP];      /* Arrays for sendcounts and displacements */
 
 	err = MPI_Comm_size(MPI_COMM_WORLD, &ntasks); /* Get nr of tasks */
@@ -386,10 +518,10 @@ fclose(fpin_ptr);
 	if (ntasks > (NP+1)) {
 		printf("You cannot use more than %d slave processes\n", NP);
 		MPI_Finalize(); /* Quit if there is only one processor */
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 
-	if (MPI_METHOD==2) { /* Method 2: Master and Slave */
+	if ( (MPI_METHOD==2) || ((MPI_METHOD==3) && (id==0)) ) { /* Method 2, 3: Master and Slave */
 		/* Initialize sendcount and displacements arrays */
 
 		/* Fills 'sendcount'*/
@@ -432,10 +564,12 @@ fclose(fpin_ptr);
 			err = MPI_Recv(tmp[i], D, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status); /* Receive a message */
 			if (tmp[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
 				MPI_Finalize();
-				return (EXIT_SUCCESS);   /*exit*/
+				return (EXIT_SUCCESS); /*exit*/
 			}
-			cost_mpi = evaluate(D,tmp[0],argv[2]);  /* Evaluate new vector in tmp[] */
-			dest_id = 0;            /* Destination address */
+			cost_mpi = evaluate(D,tmp[0],argv[2]); /* Evaluate new vector in tmp[] */
+			dest_id = 0; /* Destination address */
+
+			/*Returns cost to Master*/
 			err = MPI_Send(&cost_mpi, 1, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
 		}
 		while(MPI_METHOD==2) { /* Method 2: Slave */
@@ -444,18 +578,43 @@ fclose(fpin_ptr);
 			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
 			 * due to low values of D.                                               */
 
-			/* Receive the scattered matrix from process 0, place it in array y */
-			err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			/* Receive the scattered matrix from process 0, place it in array tmp */
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1000, MPI_DOUBLE, root, MPI_COMM_WORLD);
 			if (tmp_y[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
 				MPI_Finalize();
-				return (EXIT_SUCCESS);   /*exit*/
+				return (EXIT_SUCCESS); /*exit*/
 			}
 
 			/*Calls optimization routine*/
 			for (i=0; i<sendcount[id]/MAXDIM; i++) {
-				trial_cost_y[i]=evaluate(D,tmp_y[i],argv[2]);  /* Evaluate new vector in tmp[] */
+				trial_cost_y[i]=evaluate(D,tmp_y[i],argv[2]); /* Evaluate new vector in tmp_y[] */
 			}
 
+			/*Returns cost to Master*/
+			MPI_Send (&trial_cost_y, sendcount[id]/MAXDIM, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+		}
+		while(MPI_METHOD==3) { /* Method 3: Slave */
+			MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+			if (sendcount[0]==123) { /*exit message*/
+				MPI_Finalize();
+				return (EXIT_SUCCESS); /*exit*/
+			}
+			MPI_Bcast(&displs, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+
+			/* An unexpected error exist with some combinations of 'D' and the total *
+			 * total number of processes if recvcount (number of elements in receive *
+			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
+			 * due to low values of D.                                               */
+
+			/* Receive the scattered matrix from process 0, place it in array tmp_y */
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1000, MPI_DOUBLE, root, MPI_COMM_WORLD);
+
+			/*Calls optimization routine*/
+			for (i=0; i<sendcount[id]/MAXDIM; i++) {
+				trial_cost_y[i]=evaluate(D,tmp_y[i],argv[2]); /* Evaluate new vector in tmp_y[] */
+			}
+
+			/*Returns cost to Master*/
 			MPI_Send (&trial_cost_y, sendcount[id]/MAXDIM, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
 		}
 	}
@@ -568,7 +727,6 @@ fclose(fpin_ptr);
 	if (cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
-		/* printf("INFO:  de36.c - Cost is zero during Initialization); */
 		sleep(1);
 		/* printf("waking-up...\n"); */
 	}
@@ -594,9 +752,7 @@ fclose(fpin_ptr);
 					if (MPI_EXXIT) {
 						NP=0;
 						genmax=0;
-						/* printf("INFO:  de36.c - Ctrl-C has been pressed during Initialization\n"); */
-						/* fflush(stdout); */
-						sleep(1);
+						/* sleep(1); */
 						/* printf("waking-up...\n"); */
 					}
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
@@ -606,14 +762,13 @@ fclose(fpin_ptr);
 	}
 	if (MPI_METHOD==2) { /* Method 2: Master */
 		/* Scatter tmp to all proceses, place it in tmp_y */
-		err = MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
 		nfeval=nfeval+NP;
-		/* Receive messages with scattered data */
-		/* from all slave processes */
+		/* Receive messages with scattered data from all slave processes */
 		for (i=1; i<ntasks; i++) {
-			MPI_Recv (&trial_cost_y, MAXPOP*MAXDIM, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, &status);
-			MPI_Get_count(&status, MPI_DOUBLE, &count);  /* Get nr of elements in message */
+			MPI_Recv (&trial_cost_y, MAXPOP, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 			source_id = (status.MPI_SOURCE); /* Get id of sender */
+			count = sendcount[source_id]/MAXDIM; /* Get nr of elements in message */
 
 			/* Arrange cost returned from slaves */
 			j=0;
@@ -621,19 +776,59 @@ fclose(fpin_ptr);
 				j=j + sendcount[k]/MAXDIM;
 			}
 			/* j holds the correct start index for trial_cost */
-			for (k=0; k<NP; k++) {
+			for (k=0; k<count; k++) {
 				cost[j+k]=trial_cost_y[k];
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/* printf("INFO:  de36.c - Ctrl-C has been pressed during Initialization\n"); */
-					/* fflush(stdout); */
-					sleep(1);
+					/* sleep(1); */
 					/* printf("waking-up...\n"); */
 				}
 			}
 		}
 	}
+	if (MPI_METHOD==3) { /* Method 3: Master */
+		MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+		MPI_Bcast(&displs, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+		/* */
+		time (&t_start[0]);
+
+		/* Scatter tmp to all proceses, place it in tmp_y */
+		MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		nfeval=nfeval+NP;
+		/* Receive messages with scattered data from all slave processes */
+		for (i=1; i<ntasks; i++) {
+			MPI_Recv (&trial_cost_y, MAXPOP, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+			source_id = (status.MPI_SOURCE); /* Get id of sender */
+			count = sendcount[source_id]/MAXDIM; /* Get nr of elements in message */
+
+			/* */
+			time (&t_end[source_id]);
+			t_dif = difftime(t_end[source_id], t_start[0]);
+
+			/* Arrange cost returned from slaves */
+			j=0;
+			for (k=0; k<source_id; k++) {
+				j=j + sendcount[k]/MAXDIM;
+			}
+			/* j holds the correct start index for trial_cost */
+			for (k=0; k<count; k++) {
+				cost[j+k]=trial_cost_y[k];
+				if (MPI_EXXIT) {
+					NP=0;
+					genmax=0;
+					/*sleep(1);*/
+					/* printf("waking-up...\n"); */
+				}
+			}
+		}
+
+		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+		if (MPI_EXXIT==0) {
+			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
+		}
+	}
+
    #endif
    cmin = cost[0];
    imin = 0;
@@ -667,7 +862,7 @@ fclose(fpin_ptr);
 	 do                        /* Pick a random population member */
 	 {                         /* Endless loop for NP < 2 !!!     */
 	   r1 = (int)(rnd_uni(&rnd_uni_init)*NP);
-	 }while(r1==i);            
+	 }while(r1==i);
 
 	 do                        /* Pick a random population member */
 	 {                         /* Endless loop for NP < 3 !!!     */
@@ -717,7 +912,7 @@ fclose(fpin_ptr);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
-	   {                       
+	   {
 	     tmp[i][n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     n = (n+1)%D;
 	     L++;
@@ -733,7 +928,7 @@ fclose(fpin_ptr);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
-	   {                       
+	   {
 	     tmp[i][n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     n = (n+1)%D;
 	     L++;
@@ -744,7 +939,7 @@ fclose(fpin_ptr);
 /*-------If you get misconvergence try to increase NP. If this doesn't help you----------*/
 /*-------should play around with all three control variables.----------------------------*/
 	 else if (strategy == 3) /* similiar to DE2 but generally better */
-	 { 
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
@@ -757,13 +952,13 @@ fclose(fpin_ptr);
 	 }
 /*-------DE/best/2/exp is another powerful strategy worth trying--------------------------*/
 	 else if (strategy == 4)
-	 { 
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
-	   {                           
-	     tmp[i][n] = bestit[n] + 
+	   {
+	     tmp[i][n] = bestit[n] +
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     n = (n+1)%D;
 	     L++;
@@ -771,13 +966,13 @@ fclose(fpin_ptr);
 	 }
 /*-------DE/rand/2/exp seems to be a robust optimizer for many functions-------------------*/
 	 else if (strategy == 5)
-	 { 
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
-	   {                           
-	     tmp[i][n] = (*pold)[r5][n] + 
+	   {
+	     tmp[i][n] = (*pold)[r5][n] +
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     n = (n+1)%D;
 	     L++;
@@ -787,24 +982,24 @@ fclose(fpin_ptr);
 /*=======Essentially same strategies but BINOMIAL CROSSOVER===============================*/
 
 /*-------DE/best/1/bin--------------------------------------------------------------------*/
-	 else if (strategy == 6) 
+	 else if (strategy == 6)
 	 {
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {                       
+	     {
 	       tmp[i][n] = bestit[n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     }
 	     n = (n+1)%D;
            }
 	 }
 /*-------DE/rand/1/bin-------------------------------------------------------------------*/
-	 else if (strategy == 7) 
+	 else if (strategy == 7)
 	 {
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
@@ -815,10 +1010,10 @@ fclose(fpin_ptr);
            }
 	 }
 /*-------DE/rand-to-best/1/bin-----------------------------------------------------------*/
-	 else if (strategy == 8) 
-	 { 
+	 else if (strategy == 8)
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
@@ -830,14 +1025,14 @@ fclose(fpin_ptr);
 	 }
 /*-------DE/best/2/bin--------------------------------------------------------------------*/
 	 else if (strategy == 9)
-	 { 
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {                       
-	       tmp[i][n] = bestit[n] + 
+	     {
+	       tmp[i][n] = bestit[n] +
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     }
 	     n = (n+1)%D;
@@ -847,12 +1042,12 @@ fclose(fpin_ptr);
 	 else
 	 {
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {                       
-	       tmp[i][n] = (*pold)[r5][n] + 
+	     {
+	       tmp[i][n] = (*pold)[r5][n] +
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     }
 	     n = (n+1)%D;
@@ -871,7 +1066,6 @@ fclose(fpin_ptr);
 	if (trial_cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
-		/* printf("INFO:  de36.c - Cost is zero"); */
 		sleep(1);
 		/* printf("waking-up...\n"); */
 	}
@@ -897,9 +1091,7 @@ fclose(fpin_ptr);
 					if (MPI_EXXIT) {
 						NP=0;
 						genmax=0;
-						/* printf("INFO:  de36.c - Ctrl-C has been pressed during Mutation\n"); */
-						/* fflush(stdout); */
-						sleep(1);
+						/* sleep(1); */
 						/* printf("waking-up...\n"); */
 					}
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
@@ -909,14 +1101,13 @@ fclose(fpin_ptr);
 	}
 	if (MPI_METHOD==2) { /* Method 2: Master */
 		/* Scatter tmp to all proceses, place it in tmp_y */
-		MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
 		nfeval=nfeval+NP;
-		/* Receive messages with scattered data */
-		/* from all slave processes */
+		/* Receive messages with scattered data from all slave processes */
 		for (i=1; i<ntasks; i++) {
-			MPI_Recv (&trial_cost_y, MAXPOP*MAXDIM, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, &status);
-			MPI_Get_count(&status, MPI_DOUBLE, &count);  /* Get nr of elements in message */
+			MPI_Recv (&trial_cost_y, MAXPOP, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 			source_id = (status.MPI_SOURCE); /* Get id of sender */
+			count = sendcount[source_id]/MAXDIM; /* Get nr of elements in message */
 
 			/* Arrange cost returned from slaves */
 			j=0;
@@ -924,17 +1115,58 @@ fclose(fpin_ptr);
 				j=j + sendcount[k]/MAXDIM;
 			}
 			/* j holds the correct start index for trial_cost */
-			for (k=0; k<NP; k++) {
+			for (k=0; k<count; k++) {
 				trial_cost[j+k]=trial_cost_y[k];
 				if (MPI_EXXIT) {
 					NP=0;
 					genmax=0;
-					/* printf("INFO:  de36.c - Ctrl-C has been pressed during Mutation\n"); */
 					/* sleep(1); */
 					/* printf("waking-up...\n"); */
 				}
 
 			}
+		}
+	}
+	if (MPI_METHOD==3) { /* Method 3: Master */
+		MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+		MPI_Bcast(&displs, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
+		/* */
+		time (&t_start[0]);
+
+		/* Scatter tmp to all proceses, place it in tmp_y */
+		MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		nfeval=nfeval+NP;
+		/* Receive messages with scattered data from all slave processes */
+		for (i=1; i<ntasks; i++) {
+			MPI_Recv (&trial_cost_y, MAXPOP, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+			source_id = (status.MPI_SOURCE); /* Get id of sender */
+			count = sendcount[source_id]/MAXDIM; /* Get nr of elements in message */
+
+			/* */
+			time (&t_end[source_id]);
+			t_dif = difftime(t_end[source_id], t_start[0]);
+
+			/* Arrange cost returned from slaves */
+			j=0;
+			for (k=0; k<source_id; k++) {
+				j=j + sendcount[k]/MAXDIM;
+			}
+			/* j holds the correct start index for trial_cost */
+			for (k=0; k<count; k++) {
+				trial_cost[j+k]=trial_cost_y[k];
+				if (MPI_EXXIT) {
+					NP=0;
+					genmax=0;
+					/* sleep(1); */
+					/* printf("waking-up...\n"); */
+				}
+
+			}
+		}
+
+		/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+		if (MPI_EXXIT==0) {
+			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, trial_cost);
 		}
 	}
       #endif
@@ -945,18 +1177,18 @@ fclose(fpin_ptr);
 	    cost[i]=trial_cost[i];
 	    assignd(D,(*pnew)[i],tmp[i]);
 	    if (trial_cost[i]<cmin)          /* Was this a new minimum? */
-	    {                               /* if so...*/
+	    {                                /* if so...                */
 	       cmin=trial_cost[i];           /* reset cmin to new low...*/
 	       imin=i;
 	       assignd(D,best,tmp[i]);
-	    }                           
-	 }                            
+	    }
+	 }
 	 else
 	 {
 	    assignd(D,(*pnew)[i],(*pold)[i]); /* replace target with old value */
 	 }
       }   /* End mutation loop through pop. */
-					   
+
       assignd(D,bestit,best);  /* Save best population member of current iteration */
 
       /* swap population arrays. New generation becomes old one */
@@ -1038,8 +1270,8 @@ fclose(fpin_ptr);
 	}
    }
 
-   printf("Ending optimization\n");
-   fprintf(fpout_ptr,"Ending optimization\n");
+   printf("INFO:  Ending optimization\n");
+   fprintf(fpout_ptr,"INFO:  Ending optimization\n");
 
    fclose(fpout_ptr);
 
@@ -1050,7 +1282,7 @@ fclose(fpin_ptr);
 		for (j=0; j<m; j++) {
 			i=0;
 			tmp[i][0] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
-			dest_id=j+1;		/* Destination address */
+			dest_id=j+1; /* Destination address */
 			err = MPI_Send(tmp[i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
 		}
 	}
@@ -1060,7 +1292,11 @@ fclose(fpin_ptr);
 				tmp[i][j] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
 			}
 		}
-		err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D, MPI_DOUBLE, root, MPI_COMM_WORLD);
+	}
+	if (MPI_METHOD==3) {
+		sendcount[0]=123;
+		err = MPI_Bcast(&sendcount, MAXPOP, MPI_INT, root, MPI_COMM_WORLD);
 	}
 
 	MPI_Finalize();
@@ -1087,7 +1323,7 @@ void sigproc(int sig)
 		MPI_EXXIT=1;
 	}
 	#else
-	/* printf("you have pressed ctrl-c\n"); */
+	/* printf("INFO:  de36.c - sigproc -- Ctrl-C has been pressed.\n"); */
 	sleep(1);
 	#endif
 }

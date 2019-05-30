@@ -80,7 +80,19 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	/* printf("host name: %s\n", hostname); */
-	ii=strpos2(argv[2], ".", 1);
+	strcpy(lkk, argv[2]);
+	ii=strpos2(lkk, "/", 1);
+	if (ii) {           /*should character '/' exist, files are in a different directory*/
+		ii=strlen(lkk);
+		while (lkk[ii--] != 47) {} /* 47="/" */
+		ii++;
+
+		lkk[ii+1]='\0';
+		chdir(lkk); /*now, change directory                                         */
+	}
+	else
+		ii=1;
+	ii=strpos2(argv[2], ".", ii);
 	if (ii) /* filename is "filename.xx.xx" */
 		argv[2][ii-1]='\0';
 	if (*argv[1] == 45) /* 45="-" */

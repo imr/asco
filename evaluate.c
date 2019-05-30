@@ -53,10 +53,10 @@ double evaluate(int D, double x[], char *filename)
 	#ifndef DEBUG
 	for (ii = 0; ii < D; ii++) {
 		if (x[ii]<-10) {
-			cost=cost+1e30*(-10-x[ii]);
+			cost=cost+9e99*(-10-x[ii]);
 		}
 		if (x[ii]>10) {
-			cost=cost+1e30*(x[ii]-10);
+			cost=cost+9e99*(x[ii]-10);
 		}
 	}
 	if (cost)

@@ -140,6 +140,10 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Spectre\n");
 				exit(EXIT_FAILURE);
 				break;
+			case 50: /*Qucs*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Qucs\n");
+				exit(EXIT_FAILURE);
+				break;
 			case 100: /*general*/
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for GENERAL\n");
 				exit(EXIT_FAILURE);

@@ -1177,7 +1177,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 	j=1;
 	while ((*measure[j].var_name) != '\0')
 		j++; /*number of total measurements*/
-	
+
 	i = 0;
 	j--; /*j=(number of total measurements-1)*/
 	l = 0;

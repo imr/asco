@@ -14,8 +14,8 @@
 
 #define COPYRIGHT       "Copyright (c) 1999-2006 Joao Ramos"
 #define GPL_INFO        "This program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details."
-#define LONGSTRINGSIZE  256 /* */
-#define SHORTSTRINGSIZE  64 /* */
+#define LONGSTRINGSIZE  65535 /* */
+#define SHORTSTRINGSIZE    64 /* */
 #define TRUE  1
 #define FALSE 0
 

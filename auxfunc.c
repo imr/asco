@@ -5,9 +5,9 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * Original version converted from "Turbo PASCAL" to C using "p2c"
- * 
- * 
- * 
+ *
+ *
+ *
  * Credit is given here to the author of the translation program
  *
  * "p2c"  Copyright 1989, 1990, 1991  Free Software Foundation, Inc.
@@ -16,7 +16,7 @@
  *                              256-80 Caltech
  *                              Pasadena CA 91125
  *                              daveg@csvax.cs.caltech.edu, cit-vax!daveg
- * 
+ *
  * The GNU License Agreement restrictions do _not_ apply to code generated
  * by p2c, nor to the p2c run-time files "p2clib.c" and "p2c.h".
  */
