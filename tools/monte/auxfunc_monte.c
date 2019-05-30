@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -37,12 +37,12 @@ void ReadParameter(char *line, char *line_smallcaps, char *s, char *data_string,
 		ReadSubKey(laux, line, &j, '=', ' ', 0);
 		StripSpaces(laux);
 
-		if (laux[strlen(laux)-1]=='\'') { /*removes '' if they exist*/
-			strsub(data_string, laux, 2, strlen(laux)-2);
+		if (laux[(int)strlen(laux)-1]=='\'') { /*removes '' if they exist*/
+			strsub(data_string, laux, 2, (int)strlen(laux)-2);
 			strcpy(laux, data_string);
 		}
 
-		*data_value = asc2real(laux, 1, strlen(laux));
+		*data_value = asc2real(laux, 1, (int)strlen(laux));
 
 		*data_value=*data_value*1e6;
 		strcpy(data_string, laux);
@@ -140,8 +140,8 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Spectre\n");
 				exit(EXIT_FAILURE);
 				break;
-			case 100: /*ROSEN*/
-				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Rosen\n");
+			case 100: /*general*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for GENERAL\n");
 				exit(EXIT_FAILURE);
 				break;
 			default:
@@ -192,7 +192,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 	(*ptr)++;
 
 	StripSpaces(lkk);
-	j = strlen(lkk);
+	j = (int)strlen(lkk);
 	while (lkk[j - 1] != ' ')
 		j--;
 
@@ -208,7 +208,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 				k--;
 			k--;
 		} else
-			k=strlen(lkk);
+			k=(int)strlen(lkk);
 
 		j = k;
 		while (lkk[j - 1] != ' ')
@@ -219,7 +219,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 
 	delta_abs = delta / 100;
 
-	value = asc2real(lkk1, 1, strlen(lkk1)); /*not used anymore but can be used to print*/
+	value = asc2real(lkk1, 1, (int)strlen(lkk1)); /*not used anymore but can be used to print*/
 						 /*'delta' instead of 'ComponenteValue*Variation'*/
 	if (value==0) {
 		fprintf(fout, ".param %c%d=AGAUSS(%s, %s*%f, 1)\n", device, *ptr, lkk1, lkk1, delta_abs);
@@ -229,7 +229,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
   		/*k = extended2engineer(&delta_abs);*/
 		fprintf(fout, ".param %c%d=AGAUSS(%s, %0.2fe%d, 1)\n",      device, *ptr, lkk1, delta_abs, extended2engineer(&delta_abs));
 	}
-	strsub(lkk1, lkk, k+2, strlen(lkk)); /*the remaing part of the input line*/
+	strsub(lkk1, lkk, k+2, (int)strlen(lkk)); /*the remaing part of the input line*/
 	fprintf(fout, "%.*s%c%d%s\n", j, lkk, device, *ptr, lkk1);
 } /*MCrlc*/
 

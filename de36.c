@@ -326,6 +326,9 @@ refresh=asc2real(laux, 1, (int)strlen(laux));    /*---output refresh cycle------
 D=0;
 while (parameters[D].name[0]  != '\0')
 	D++;                                     /*---number of parameters---------------*/
+#ifdef ROSEN_REGRESSION
+D=2;
+#endif
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
 ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
@@ -852,8 +855,8 @@ fclose(fpin_ptr);
 
       if (gen%refresh==1)   /* display after every refresh generations */
       { /* ABORT works only if conio.h is accepted by your compiler */
-	printf("\n\n                         PRESS CTRL-C TO ABORT");
-	printf("\n\n\n Best-so-far cost funct. value=%-15.10g\n",cmin);
+	printf("\n                         PRESS CTRL-C TO ABORT");
+	printf("\n\n Best-so-far cost funct. value=%-15.10g\n",cmin);
 
 	for (j=0;j<D;j++)
 	{

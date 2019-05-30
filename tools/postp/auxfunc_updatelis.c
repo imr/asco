@@ -177,7 +177,7 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 		while (!strcmp((sprintf(laux, "%.10s", lkk), laux), "SKIP_NOSAT")) {   /*read SKIP_NOSAT from file*/
 			i = 1;
 			lkk[10] = ';';
-			while (i < strlen(lkk)) {
+			while (i < (int)strlen(lkk)) {
 				ReadSubKey(laux, lkk, &i, ';', ';', 0);
 				StripSpaces(laux);
 				strcpy(skip[k - 1], laux);

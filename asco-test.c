@@ -9,10 +9,12 @@
  */
 
 #include <string.h>
+#include <unistd.h>
 
 
 #include "de.h"
 
+#include "version.h"
 #include "auxfunc.h"
 #include "initialize.h"
 #include "errfunc.h"
@@ -36,12 +38,18 @@ int main(int argc, char *argv[])
 	long  nfeval=0; /* number of function evaluations     */
 	double x[MAXDIM]; /* members  */
 	double cost=0;
-	int i,ii;
+	int i,ii, ccode;
+	char hostname[SHORTSTRINGSIZE];
 
 
-/*------Initializations----------------------------*/
 	/**/
-	/*Step1: Check input arguments*/
+	/*Step1: Copyright info*/
+	printf("\n%s - %s\n", VERSION, COPYRIGHT);
+	printf("%s\n\n",GPL_INFO);
+
+
+	/**/
+	/*Step2: Check input arguments*/
 	if (argc != 3) { /* number of arguments */
 		printf("\nUsage : asco -<simulator> <inputfile>\n");
 		printf("\nExamples:\n");
@@ -55,9 +63,14 @@ int main(int argc, char *argv[])
 
 
 	/**/
-	/*Step2: Initialization of all variables and strucutres*/
+	/*Step3: Initialization of all variables and strucutres*/
+	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
+		printf("asco-test.c -- gethostname failed, ccode = %d\n", ccode);
+		exit(EXIT_FAILURE);
+	}
+	/* printf("host name: %s\n", hostname); */
 	ii=strpos2(argv[2], ".", 1);
-	if (ii) /*filename is "filename.xx.xx"*/
+	if (ii) /* filename is "filename.xx.xx" */
 		argv[2][ii-1]='\0';
 	if (*argv[1] == 45) /* 45="-" */
 		*argv[1]++;
@@ -67,49 +80,57 @@ int main(int argc, char *argv[])
 		case 'e': /*Eldo*/
 			if (!strcmp(argv[1], "eldo")) {
 				spice=1;
-				printf("INFO:  First time, Eldo initialization\n");
+				printf("INFO:  Eldo initialization on '%s'\n", hostname);
+				fflush(stdout);
 			}
 			break;
 		case 'h': /*HSPICE*/
 			if (!strcmp(argv[1], "hspice")) {
 				spice=2;
-				printf("INFO:  First time, HSPICE initialization\n");
+				printf("INFO:  HSPICE initialization on '%s'\n", hostname);
+				fflush(stdout);
 			}
 			break;
 		case 'l': /*LTspice*/
 			if (!strcmp(argv[1], "ltspice")) {
 				spice=3;
-				printf("INFO:  First time, LTSpice initialization\n");
+				printf("INFO:  LTSpice initialization on '%s'\n", hostname);
+				fflush(stdout);
 			}
 			break;
 		case 's': /*Spectre*/
 			if (!strcmp(argv[1], "spectre")) {
 				spice=4;
-				printf("INFO:  First time, Spectre initialization\n");
+				printf("INFO:  Spectre initialization on '%s'\n", hostname);
+				fflush(stdout);
 			}
 			break;
-		case 'r': /*rosen*/
-			if (!strcmp(argv[1], "rosen")) {
+		case 'g': /*general*/
+			if (!strcmp(argv[1], "general")) {
 				spice=100;
-				printf("INFO:  First time, ROZEN initialization\n");
+				printf("INFO:  GENERAL initialization on '%s'\n", hostname);
+				fflush(stdout);
 			}
 			break;
 		default:
-			printf("asco.test.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+			printf("asco-test.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+			fflush(stdout);
 			exit(EXIT_FAILURE);
 	}
 	if (spice) {
 		if (initialize(argv[2]))
 			exit(EXIT_FAILURE);
 		printf("INFO:  Initialization has fineshed without errors\n");
+		fflush(stdout);
 	} else {
 		printf("asco-test.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+		fflush(stdout);
 		exit(EXIT_FAILURE);
 	}
 
 
 	/**/
-	/*Step3: define needed variables value */
+	/*Step4: define needed variables value */
 	Wobj=10; Wcon=100;
 
 	D=0;
@@ -118,7 +139,7 @@ int main(int argc, char *argv[])
 
 
 	/**/
-	/*Step4: call optimization routine */
+	/*Step5: call optimization routine */
 	ii=1;
 	for (i = 0; i < ii; i++) {
 		nfeval++;

@@ -24,8 +24,8 @@
 */
 void read_sweep_vars(char *Result, char *data)
 {
-	if (data[strlen(data) - 1] == ']') {
-		data[strlen(data) - 1] = '\0';
+	if (data[(int)strlen(data) - 1] == ']') {
+		data[(int)strlen(data) - 1] = '\0';
 	}
 
 	strcpy(Result, data);
@@ -109,7 +109,7 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 				/*The next block reads the data to sweep*/
 				j = strpos2(lkk, "[", 1);
 				if (j == 0 || lkk[0] == '*')
-					sprintf(alter[i - 1].text, "%.*s", strlen(lkk), lkk);
+					sprintf(alter[i - 1].text, "%.*s", (int)strlen(lkk), lkk);
 				else {
 					if (strpos2(lkk, "  ", j)) {
 						printf("auxfunc_alter.c - More than one space exist in: %s\n", strsub(data, lkk, j, LONGSTRINGSIZE));

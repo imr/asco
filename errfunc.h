@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -16,7 +16,7 @@
 
 
 double errfunc(char *filename, double *x);
-/* int LogtoFile(double cost,char *hostname); */
+/* void LogtoFile(double cost,char *hostname); */
 /* double CostFunction(); */
 /* int AllConstraintsMet(); */
 

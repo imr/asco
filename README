@@ -1,8 +1,8 @@
-asco-0.4.0
+asco-0.4.1
 
 ------------------------------------------------------------------------
 1. INSTALLING ASCO
-   ASCO is written in C. Portability on *NIX type operating systems
+   ASCO is written in ANSI C. Portability on *NIX type operating systems
    should follows relatively easily. Download the latest version and at
    the command line type the following:
 

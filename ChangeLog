@@ -1,6 +1,20 @@
+ASCO 0.4.1: April 9, 2006
+   * Multiple simulations can now be runned in the same hostname (computer)
+   * Local optimization algorithm: Hooke&Jeeves and Nelder-Mead
+   * Minor compilation/bug fixes
+
+   Manual:
+   * 'Quick Start Guide' section added
+   * 'rosen' replaced by 'general'
+   * Hybrid optimization algorithm: Hooke&Jeeves and Nelder-Mead
+
+
+
+
 ASCO 0.4.0: March 5, 2006
    * Multiprocessor support
-   * Minor compilation/bug fixes.
+   * Minor compilation/bug fixes
+   * More or less 5400 lines
 
    Manual:
    * Parallel processing documented
@@ -15,7 +29,7 @@ ASCO 0.3.12: January 29, 2006
 
    Manual:
    * RF module and examples describing its usage included
-   * Section 'Getting Started' explains text written by de36.c to stdout
+   * Section 'Getting Started' explains text written by 'de36.c' to stdout
 
 
 
@@ -56,7 +70,7 @@ ASCO 0.3.8: August 2, 2005
     * ASCO name used for the first time
     * Add support for LTSpice simulator
     * Major code clean-up and modularization
-    * About 5000 lines, including the DE code.
+    * About 3600 lines, including the DE code
 
 
 
@@ -70,7 +84,7 @@ version 0.3.3: July 12, 2005
 version 0.3.0: July 4, 2005
     * Autonomous optimization using the differential evolution (DE) algorithm
       from Rainer Storn and Ken Price
-    * Less than 2700 lines, including the DE code.
+    * Less than 2400 lines, including the DE code
 
 
 
@@ -91,7 +105,7 @@ version 0.2.0: September 4, 2004
 version 0.1.0: July 17, 2004
     * Code base divided in two major functions.
     * Can read and write a variable number of optimization variables
-    * About 550 lines plus external functions
+    * About 470 lines plus external functions
 
 
 

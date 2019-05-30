@@ -92,11 +92,11 @@ int strpos2(char *s, register char *pat, register int pos)
 
 	if (--pos < 0)
 		return 0;
-	slen = strlen(s) - pos;
+	slen = (int)strlen(s) - pos;
 	cp = s + pos;
 	if (!(ch = *pat++))
 		return 0;
-	pos = strlen(pat);
+	pos = (int)strlen(pat);
 	slen -= pos;
 	while (--slen >= 0) {
 		if (*cp++ == ch && !strncmp(cp, pat, pos))
@@ -124,13 +124,13 @@ void fgets2(char *s, int n, FILE *stream)
 {
 	char *TEMP;
 
-	fgets(s, n, stream);
+	(void)fgets(s, n, stream);
 	TEMP = strchr(s, '\n');
 	if (TEMP != NULL)
 		*TEMP = 0;
-	
-	if (strlen (s)>LONGSTRINGSIZE-2) {
-		printf("INFO:  auxfunc.c - fgets2 -- maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
+
+	if ((int)strlen (s)>n-2) { /* n=LONGSTRINGSIZE */
+		printf("INFO:  auxfunc.c - fgets2 -- BUFFER OVERFLOW, maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
 		/* exit(EXIT_FAILURE); */
 	}
 } /*fgets2*/
@@ -159,7 +159,7 @@ int inlinestrpos(char *s)
 		case 4: /*Spectre*/
 			k = strpos2(s, "//", 1);
 			break;
-		case 100: /*ROSEN*/
+		case 100: /*general*/
 			k = 0;
 			break;
 		default:
@@ -184,10 +184,10 @@ void ReadKey(char *Result, char *key, FILE *stream)
 
 	fgets2(lkk1, LONGSTRINGSIZE, stream);
 
-	while ((strcmp((sprintf(STR1, "%.*s", strlen(key), lkk1), STR1), key) != 0) & (!P_eof(stream)))
+	while ((strcmp((sprintf(STR1, "%.*s", (int)strlen(key), lkk1), STR1), key) != 0) & (!P_eof(stream)))
 		fgets2(lkk1, LONGSTRINGSIZE, stream);
 
-	if (strcmp((sprintf(STR1, "%.*s", strlen(key), lkk1), STR1), key))
+	if (strcmp((sprintf(STR1, "%.*s", (int)strlen(key), lkk1), STR1), key))
 		Result[0]='\0';
 	else
 		strcpy(Result, lkk1);
@@ -204,16 +204,16 @@ void ReadKey(char *Result, char *key, FILE *stream)
 char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, char end_char, int compliance)
 {
 	char line_local[LONGSTRINGSIZE]; /*??further investigate the need of having a local copy*/
-	unsigned int i;
+	int i;
 	/*,k*/
-	unsigned int j;
+	int j;
 	char data[LONGSTRINGSIZE];
 
 	strcpy(line_local, line);
 	strcat(line_local, " ");
 
 	i = *start_from;
-	if (i>=strlen(line_local)) { /*immediatly exits if condition is met*/
+	if (i>=(int)strlen(line_local)) { /*immediatly exits if condition is met*/
 		Result[0]='\0';
 		return Result;
 	}
@@ -222,15 +222,15 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 		printf("auxfunc.c - ReadSubKey -- start_from is zero: %s\n", line);
 		exit(EXIT_FAILURE);
 	}
-	while ( (line_local[i - 1] != begin_char) && (i < strlen(line_local)) )
+	while ( (line_local[i - 1] != begin_char) && (i < (int)strlen(line_local)) )
 		i++;
 
-	if (i != strlen(line_local))
+	if (i != (int)strlen(line_local))
 		j = i + 1;
 	else
 		j = i;
 
-	while ( (line_local[j - 1] != end_char) && (j < strlen(line_local)) )
+	while ( (line_local[j - 1] != end_char) && (j < (int)strlen(line_local)) )
 		j++;
 
 
@@ -314,14 +314,18 @@ void StripSpaces(char *data)
 	char STR1[LONGSTRINGSIZE];
 
 	i = 1;
-	j = strlen(data);
+	j = (int)strlen(data);
 
-	while (data[i - 1] == ' ')
+	if (!j) /*immediatly retuns on empty string*/
+		return;
+
+	while ((data[i - 1] == ' ') && (i<j))
 		i++;
-	while (data[j - 1] == ' ')
+	while ((data[j - 1] == ' ') && (j>1))
 		j--;
 
-	strcpy(data, strsub(STR1, data, (int)i, (int)(j - i + 1)));
+	strsub(STR1, data, (int)i, (int)(j - i + 1));
+	strcpy(data, STR1);
 } /*StripSpaces*/
 
 
@@ -334,7 +338,7 @@ void Str2Lower(char *data)
 {
 	int i, FORLIM;
 
-	FORLIM = strlen(data);
+	FORLIM = (int)strlen(data);
 	for (i = 0; i < FORLIM; i++) {
 		if (data[i] >= 65 && data[i] <= 90)
 			data[i] += 32;
@@ -351,7 +355,7 @@ void Str2Upper(char *data)
 {
 	int i, FORLIM;
 
-	FORLIM = strlen(data);
+	FORLIM = (int)strlen(data);
 	for (i = 0; i < FORLIM; i++) {
 		if (data[i] >= 97 && data[i] <= 122)
 			data[i] -= 32;
@@ -375,7 +379,7 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 	strsub(lstring, lstring_, startIndex, (endIndex - startIndex + 1));
 	StripSpaces(lstring);
 	Str2Lower(lstring);
-	endIndex = strlen(lstring);
+	endIndex = (int)strlen(lstring);
 
 
 	if (strpos2(lstring, "*", 1) || strpos2(lstring, "/", 1))  /*if we are reading*/
@@ -389,7 +393,7 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 	if ((lstring[0] < 48) || (lstring[0] > 57) )               /* '0'=48 ... '9'=57 */
 		if ((lstring[0] != 43) && (lstring[0] != 45) )     /* '+'=43     '-'=45 */
 			return 0;                                  /*                   */
-	if (strlen(lstring)>2)                                     /* '1u' is a valid number   */
+	if ((int)strlen(lstring)>2)                                /* '1u' is a valid number   */
 		if ((lstring[1] < 46) || (lstring[1] > 57) )       /*                          */
 			if (!strpos2(lstring, "meg", 2))           /* '1meg' is a valid number */
 				if (lstring[1] != 101)             /* '1e6' is a valid number  */
@@ -447,9 +451,11 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 				break;
 
 			default:    /*correct this to print lkk*/
+				printf("auxfunc.c - asc2real -- Something unexpected has happened!\n");
+				exit(EXIT_FAILURE);
 				/*printf("Error: Variable not recognized: '%c' in '%s'\n", lstring[endIndex - 1], lstring);*/
-				auxNumb *= 0;
-				break;
+				/* auxNumb *= 0; */
+				/* break; */
 		}
 	} else {/*finds number*/
 		/*sprintf(STR1, "%.*s", (int)endIndex, lstring);*/
@@ -457,7 +463,8 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 		code = (sscanf(lstring, "%lg", &auxNumb) == 0);
 	}
 
-	if (!strcmp(strsub(STR1, lstring, (endIndex - 2), 3), "meg")) { /*finds multiple: meg*/
+	strsub(STR1, lstring, (endIndex - 2), 3);
+	if (!strcmp(STR1, "meg")) { /*finds multiple: meg*/
 		sprintf(STR1, "%.*s", (endIndex - 3), lstring);
 		code = (sscanf(STR1, "%lg", &auxNumb) == 0);
 		auxNumb *= 1e+6;

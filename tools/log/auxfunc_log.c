@@ -30,13 +30,13 @@ void PrintOneLine(char *lkk1, double *stats, int num_measures, FILE **fOut)
 	char laux[LONGSTRINGSIZE], laux2[LONGSTRINGSIZE];
 
 	strcpy(laux2, lkk);
-	for (k = 0; k <= strlen(lkk1)-1; k++)
+	for (k = 0; k <= (int)strlen(lkk1)-1; k++)
 		laux2[k]=lkk1[k];
 	j=1;
 	for (i = 1; i <= num_measures; i=i+2) {
 		sprintf(laux, "%E", stats[i]);
 		j=strpos2(lkk, ":", j);
-		for (k = 0; k <= strlen(laux)-1; k++)
+		for (k = 0; k <= (int)strlen(laux)-1; k++)
 			laux2[k+j]=laux[k];
 		j=j+k+2;
 	}
@@ -129,7 +129,7 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 				strcat(lkk1, lkk2);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
-				strsub(lkk2, lkk, j, strlen(lkk));
+				strsub(lkk2, lkk, j, (int)strlen(lkk));
 				strcat(lkk1, lkk2);
 				fprintf(*fOut, "%s\n", lkk1);
 
@@ -188,7 +188,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 			stats.max[i] = aux;
 		if (aux < stats.min[i])
 			stats.min[i] = aux;
-		if (j==strlen(lkk)) {
+		if (j==(int)strlen(lkk)) {
 			num_measures=i;
 			i=0;j=1;k++;
 			fgets2(lkk, LONGSTRINGSIZE, fIn);

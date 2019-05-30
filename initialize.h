@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2006 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -61,8 +61,9 @@ typedef struct {
 
 
 int initialize(char *filename);
-char *ReplaceSymbol(char *ret,int optimize);
-double scaleto(double value,double ina,double inb,double outa,double outb,int format);
+/* void DecodeSymbolNode(char *ret, int i) */
+void ReplaceSymbol(char *ret, int optimize);
+double scaleto(double value, double ina, double inb, double outa, double outb, int format);
 
 
 

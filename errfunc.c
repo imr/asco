@@ -71,6 +71,19 @@ double CostFunction()
 	int i=0;
 	double tolerance=0.01; /*0.01=1%; 0.1=10%*/
 
+	if (Wobj <= 0) {
+		printf("errfunc.c - CostFunction -- Wobj=%f, should be > 0\n",Wobj);
+		exit(EXIT_FAILURE);
+	}
+	if (Wcon <= 0) {
+		printf("errfunc.c - CostFunction -- Wcon=%f, should be > 0\n",Wcon);
+		exit(EXIT_FAILURE);
+	}
+	if (Wobj > Wcon) {
+		printf("errfunc.c - CostFunction -- Wobj=%f > Wcon=%f, should be less\n",Wobj, Wcon);
+		exit(EXIT_FAILURE);
+	}
+
 	while (measurements[i].meas_symbol[0] != '\0') {
 		switch (measurements[i].objective_constraint) {
 			case 1: /*MIN                                           ===> objective (MIN)*/
@@ -167,7 +180,7 @@ double CostFunction()
 /*
  * Log current simulation results to file <hostname>.log
  */
-int LogtoFile(double cost)
+void LogtoFile(double cost)
 {
 	int i, ii;
 	char laux[LONGSTRINGSIZE];
@@ -175,7 +188,7 @@ int LogtoFile(double cost)
 	/*   <hostname>.log*/
 	FILE *fspice_log;
 
-	char hostname[SHORTSTRINGSIZE] = {0};
+	char hostname[SHORTSTRINGSIZE] = "0";
 	int  ccode;
 	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
 		printf("errfunc.c - LogtoFile -- gethostname failed, ccode = %d\n", ccode);
@@ -183,9 +196,9 @@ int LogtoFile(double cost)
 	}
 	/*printf("host name: %s\n", hostname);*/
 	ii=strpos2(hostname, ".", 1);
-	if (ii)                                 /*hostname is "longmorn.xx.xx.xx"*/
+	if (ii)                                 /* hostname is "longmorn.xx.xx.xx" */
 		hostname[ii-1]='\0';
-	/*sprintf(laux, "%s.log", hostname);*/      /*hostname is "longmorn"*/
+	/*sprintf(laux, "%s.log", hostname);*/      /*h ostname is "longmorn" */
 	switch(spice) {
 		case 1: /*Eldo*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
@@ -199,7 +212,7 @@ int LogtoFile(double cost)
 		case 4: /*Spectre*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
-		case 100: /*rosen*/
+		case 100: /*general*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
 		default:
@@ -221,7 +234,7 @@ int LogtoFile(double cost)
 	i=0;
 	while (measurements[i].meas_symbol[0] != '\0') {    /*3- print measurements*/
 		sprintf(laux, "%i", i);                    /* to remove integer added in (*) */
-		ii=strlen(laux);                           /* to remove integer added in (*) */
+		ii=(int)strlen(laux);                      /* to remove integer added in (*) */
 		strcpy(laux, measurements[i].meas_symbol); /* to remove integer added in (*) */
 		laux[strlen(laux)-ii]='\0';                /* to remove integer added in (*) */
 
@@ -251,8 +264,6 @@ int LogtoFile(double cost)
 		measurements[i].measured_value=0;
 		i++;
 	}
-
-	return EXIT_SUCCESS;
 }
 
 
@@ -296,7 +307,7 @@ void WriteToMem(int num_measures)
 					break;
 				case 4: /*Spectre*/
 					break;
-				case 100: /*rosen*/
+				case 100: /*general*/
 					break;
 				default:
 					printf("errfunc.c - WriteToMem -- Something unexpected has happened!\n");
@@ -317,7 +328,7 @@ void WriteToMem(int num_measures)
 		ii=ii + strpos2(measure[i].var_name, laux, 1); /* and in Str2Lower(UNIQUECHAR) as well, this means we are processing a line with "MEASURE_VAR"*/
 		if (ii) {
 			strcpy(laux, UNIQUECHAR);
-			ii=strlen(laux);
+			ii=(int)strlen(laux);
 			strsub(laux, measure[i].var_name, ii+1, LONGSTRINGSIZE);             /*1- find output measure variable                                   */
 										             /*   by copying the last part of the string starting from UNIQUECHAR*/
 			j=0;
@@ -334,7 +345,7 @@ void WriteToMem(int num_measures)
 
 			measurements[j].measured_value=asc2real(laux, 1, (int)strlen(laux)); /*4- convert it to double                                           */
 
-			if (measurements[j].measured_value ==0) {                            /*5- Check NaN and other text strings                               */
+			if (measurements[j].measured_value==0) {                            /*5- Check NaN and other text strings                               */
 				if ((laux[0] < 43) || (laux[0] > 57) ) /*if its text*/
 					if (measurements[j].objective_constraint == 4) /*4=LE*/
 						measurements[j].measured_value=+1e+30; /*so that a large cost is later assigned*/
@@ -378,9 +389,9 @@ void WriteToMem(int num_measures)
 double errfunc(char *filename, double *x)
 {
 	/*double currentcost;*/ /*total cost*/
-	unsigned int i, ii;
+	int i, ii;
 	int ccode;
-	char laux[LONGSTRINGSIZE], hostname[SHORTSTRINGSIZE] = {0}, filename_x[SHORTSTRINGSIZE] = {0};
+	char laux[LONGSTRINGSIZE], hostname[SHORTSTRINGSIZE] = "0", filename_x[SHORTSTRINGSIZE] = "0";
 
 	/*   <hostname>.*   <hostname>.out  <hostname>.tmp <hostname>.log*/
 	FILE *fspice_input, *fspice_output, *fspice_tmp,   *fspice_log;
@@ -413,12 +424,12 @@ double errfunc(char *filename, double *x)
 		printf("errfunc.c - Step2 -- gethostname failed, ccode = %d\n", ccode);
 		exit(EXIT_FAILURE);
 	}
-	/*printf("host name: %s\n", hostname);*/
+	/* printf("host name: %s\n", hostname); */
 	ii=strpos2(hostname, ".", 1);
-	if (ii)                                 /*hostname is "longmorn.xx.xx.xx"*/
+	if (ii)                                 /* hostname is "longmorn.xx.xx.xx" */
 		hostname[ii-1]='\0';
-	sprintf(lkk, "%s%s", hostname, ".tmp"); /*hostname is "longmorn"*/
-	if ((fspice_tmp =fopen(lkk  ,"rt")) == 0) {   /*netlist to simulate given by "hostname"*/
+	sprintf(lkk, "%s%s", hostname, ".tmp"); /* hostname is "longmorn" */
+	if ((fspice_tmp =fopen(lkk  ,"rt")) == 0) {   /* netlist to simulate given by "hostname" */
 		printf("errfunc.c - Step2 -- Cannot read from tmp file: %s\n", lkk);
 		exit(EXIT_FAILURE);
 	}
@@ -435,8 +446,8 @@ double errfunc(char *filename, double *x)
 		case 4: /*Spectre*/
 			sprintf(lkk, "%s%s", hostname, ".scs");
 			break;
-		case 100: /*rosen*/
-			sprintf(lkk, "%s%s", hostname, ".dat");
+		case 100: /*general*/
+			sprintf(lkk, "%s%s", hostname, ".txt");
 			break;
 		default:
 			printf("errfunc.c - Step2 -- Something unexpected has happened!\n");
@@ -458,7 +469,7 @@ double errfunc(char *filename, double *x)
 			i=inlinestrpos(lkk);
 			ii=1;
 			ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-			if ( (laux[0]=='\0') || (ii>strlen(lkk)) || ((i<ii) && (i!=0)) ) { /* does it contains #<text>#?        */
+			if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /* does it contains #<text>#?        */
 				if (strlen(lkk) && (!RFModule(lkk, 1, fspice_input)) )
 					fprintf(fspice_input, "%s\n", lkk);                /*no, write line to <hostname>.*     */
 			} else {                                                           /*yes, replace #<text># in this line */
@@ -494,8 +505,8 @@ double errfunc(char *filename, double *x)
 		case 4: /*Spectre*/
 			sprintf(lkk, "spectremdl -batch %s.mdl -design %s.scs > /dev/null", hostname, hostname);
 			break;
-		case 100: /*rosen*/
-			sprintf(lkk, "./rosen %s.dat %s.out", hostname, hostname);
+		case 100: /*general*/
+			sprintf(lkk, "./general.sh %s %s", hostname, hostname);
 			break;
 		default:
 			printf("errfunc.c - Step3 -- Something unexpected has happened!\n");
@@ -526,7 +537,7 @@ double errfunc(char *filename, double *x)
 		case 4: /*Spectre*/
 			sprintf(lkk, "%s.measure", hostname);
 			break;
-		case 100: /*rosen*/
+		case 100: /*general*/
 			sprintf(lkk, "%s.out", hostname);
 			break;
 		default:

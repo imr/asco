@@ -39,3 +39,5 @@ typedef struct {
 
 
 int RFModule(char *line, int optimize, FILE *fout);
+/* void ReplaceSymbolRF(char *ret, double y_value); */
+/* int ExtractDeviceValuePosition(char *line); */

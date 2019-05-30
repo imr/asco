@@ -77,21 +77,21 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
  *      optimize=0 : we are initializing, just replace fixed variables
  *      optimize=1 : "   "  optimizing, replace remaining optimizing variables
  */
-char *ReplaceSymbol(char *ret, int optimize)
+void ReplaceSymbol(char *ret, int optimize)
 {
-	unsigned int i, k, ii;
+	int i, k, ii;
 	char laux[LONGSTRINGSIZE], inlinecomment[LONGSTRINGSIZE], lxp[LONGSTRINGSIZE];
 
 	k=inlinestrpos(ret);
 	inlinecomment[0]='\0';
 	if (k) {
-		strsub(inlinecomment, ret, k, strlen(ret)); /*copies the in-line comment*/
+		strsub(inlinecomment, ret, k, (int)strlen(ret)); /*copies the in-line comment*/
 		ret[k-1]='\0';
 	}
 
 	ii=1;
 	ReadSubKey(laux, ret, &ii, '#', '#', 5);
-	while (ii<=(strlen(ret))) {
+	while (ii<=(int)(strlen(ret))) {
 		/*Str2Lower(laux);*/
 		i=0;
 		while (strcmp(parameters[i].symbol, laux)) {
@@ -102,7 +102,7 @@ char *ReplaceSymbol(char *ret, int optimize)
 			i++;
 		}
 
-		strsub(laux, ret, ii+1, strlen(ret)-ii);     /*copies the last part of the string to laux*/
+		strsub(laux, ret, ii+1, (int)strlen(ret)-ii);     /*copies the last part of the string to laux*/
 		/*ret[strpos2(ret, "#", 1)-1]='\0';*/        /*properly finishes the string*/
 		ret[ii-strlen(parameters[i].symbol)-2]='\0'; /*properly finishes the string*/
 
@@ -121,7 +121,6 @@ char *ReplaceSymbol(char *ret, int optimize)
 	}
 
 	strcat(ret, inlinecomment); /*concatenates the in-line comment*/
-	return ret;
 }
 
 
@@ -131,14 +130,14 @@ char *ReplaceSymbol(char *ret, int optimize)
  * receives a string from the extract/ directory with #SYMBOL# and/or #NODE# text
  * requiring a measurement extraction and replaces it with the appropriate value
  */
-char *DecodeSymbolNode(char *ret, int i)
+void DecodeSymbolNode(char *ret, int i)
 {
-	unsigned int ii;
+	int ii;
 	char laux[LONGSTRINGSIZE];
 	
 	ii=1;
 	ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-	while (ii<=strlen(lkk)) {
+	while (ii<=(int)strlen(lkk)) {
 		Str2Lower(laux);
 		if (!strcmp(laux, "symbol"))
 			ii=ii+1000;                   /*is a "symbol" and encode this information by adding '1000'*/
@@ -150,9 +149,9 @@ char *DecodeSymbolNode(char *ret, int i)
 		}
 
 		if (ii>1000)
-			strsub(laux, lkk, ii-1000+1, strlen(lkk)-(ii-1000)); /*copies the last part of the string to laux*/
+			strsub(laux, lkk, ii-1000+1, (int)strlen(lkk)-(ii-1000)); /*copies the last part of the string to laux*/
 		else
-			strsub(laux, lkk, ii+1, strlen(lkk)-ii);             /*copies the last part of the string to laux*/
+			strsub(laux, lkk, ii+1, (int)strlen(lkk)-ii);             /*copies the last part of the string to laux*/
 		lkk[strpos2(lkk, "#", 1)-1]='\0';                            /*properly finishes string                  */
 		if (ii>1000) {
 			ii=ii-1000;
@@ -166,9 +165,6 @@ char *DecodeSymbolNode(char *ret, int i)
 		ii=1;
 		ReadSubKey(laux, lkk, &ii, '#', '#', 0);
 	}
-
-	strcpy (ret, lkk);
-	return ret;
 }
 
 
@@ -185,9 +181,9 @@ char *DecodeSymbolNode(char *ret, int i)
  */
 int initialize(char *filename) /* , double *x) */
 {
-	unsigned int i, ii;
+	int i, ii;
 	int ccode;
-	char laux[LONGSTRINGSIZE], laux2[SHORTSTRINGSIZE], hostname[SHORTSTRINGSIZE] = {0};
+	char laux[LONGSTRINGSIZE], laux2[SHORTSTRINGSIZE], hostname[SHORTSTRINGSIZE] = "0";
 
 	/*   <inputfile>.*   <inputfile>.cfg <hostname>.tmp /extract/<file> */
 	FILE *fspice_source, *fspice_cfg,    *fspice_tmp,   *fextract;
@@ -300,7 +296,7 @@ int initialize(char *filename) /* , double *x) */
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
 				}
-				strsub(laux2, laux, 5, strlen(laux));
+				strsub(laux2, laux, 5, (int)strlen(laux));
 				if (!strcmp(laux2, "DOUBLE"))
 					parameters[i].format=parameters[i].format+1;
 				if (!strcmp(laux2, "INT"))
@@ -411,8 +407,8 @@ int initialize(char *filename) /* , double *x) */
 		case 4: /*Spectre*/
 			sprintf(laux, "%s%s", filename, ".scs");
 			break;
-		case 100: /*rosen*/
-			sprintf(laux, "%s%s", filename, ".dat");
+		case 100: /*general*/
+			sprintf(laux, "%s%s", filename, ".txt");
 			break;
 		default:
 			printf("initialize.c - Step4 -- Something unexpected has happened!\n");
@@ -429,9 +425,8 @@ int initialize(char *filename) /* , double *x) */
 	}
 	/* printf("host name: %s\n", hostname); */
 	ii=strpos2(hostname, ".", 1);
-	if (ii) {                               /* hostname is "longmorn.xx.xx.xx" */
+	if (ii)                                 /* hostname is "longmorn.xx.xx.xx" */
 		hostname[ii-1]='\0';
-	}
 	sprintf(lkk, "%s%s", hostname, ".tmp"); /* hostname is "longmorn" */
 	if ((fspice_tmp =fopen(lkk  ,"wt")) == 0) { /* netlist to simulate given by "hostname" */
 		printf("initialize.c - Step4 -- Cannot write to tmp file: %s\n", lkk);
@@ -455,7 +450,7 @@ int initialize(char *filename) /* , double *x) */
 				i=inlinestrpos(lkk);
 				ii=1;
 				ReadSubKey(laux, lkk, &ii, '#', '#', 0);
-				if ( (laux[0]=='\0') || (ii>strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?         */
+				if ( (laux[0]=='\0') || (ii>(int)strlen(lkk)) || ((i<ii) && (i!=0)) ) { /*does it contains #<text>#?         */
 					if (strlen(lkk) && (!RFModule(lkk, 0, fspice_tmp)) )
 						fprintf(fspice_tmp, "%s\n", lkk);                  /* no: write line to <hostname>.tmp   */
 				} else {                                                           /* yes: replace #<text># in this line */
@@ -490,7 +485,7 @@ int initialize(char *filename) /* , double *x) */
 			break;
 		case 4: /*Spectre*/                 /* ".end" does not exist in Spectre syntax */
 			break;
-		case 100: /*rosen*/
+		case 100: /*general*/
 			break;
 		default:
 			printf("initialize.c - Step4.1 -- Something unexpected has happened!\n");
@@ -543,7 +538,7 @@ int initialize(char *filename) /* , double *x) */
 				}
 			}
 			break;
-		case 100: /*rosen*/
+		case 100: /*general*/
 			break;
 		default:
 			printf("initialize.c - Step4.1 -- Something unexpected has happened!\n");
@@ -556,7 +551,7 @@ int initialize(char *filename) /* , double *x) */
 	fprintf(fspice_tmp, "\n");
 	while (strcmp(measurements[i].meas_symbol,"\0") ) {  /*until the end of all symbols*/
 		sprintf(lkk, "%i", i);                                         /* to remove integer added in (*) */
-		ii=strlen(lkk);                                                /* to remove integer added in (*) */
+		ii=(int)strlen(lkk);                                           /* to remove integer added in (*) */
 		sprintf(lkk, "%s%s", "extract/", measurements[i].meas_symbol); /* to remove integer added in (*) */
 		lkk[strlen(lkk)-ii]='\0';                                      /* to remove integer added in (*) */
 		if ((fextract =fopen(lkk ,"rt")) == 0) {
@@ -573,7 +568,7 @@ int initialize(char *filename) /* , double *x) */
 	/*Step4.2.1: Add the measurement to <hostname>.tmp*/
 	/*---------------------------------------------------------------*/
 		sprintf(lkk, "%i", i);                    /* to remove integer added in (*) */
-		ii=strlen(lkk);                           /* to remove integer added in (*) */
+		ii=(int)strlen(lkk);                      /* to remove integer added in (*) */
 		strcpy(lkk, measurements[i].meas_symbol); /* to remove integer added in (*) */
 		lkk[strlen(lkk)-ii]='\0';                 /* to remove integer added in (*) */
 		switch(spice) {
@@ -589,7 +584,7 @@ int initialize(char *filename) /* , double *x) */
 			case 4: /*Spectre*/
   				fprintf(fspice_tmp, "// %i) Extract \'%s\'\n", i+1, lkk);
 				break;
-			case 100: /*rosen*/
+			case 100: /*general*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
 				break;
 			default:
@@ -605,7 +600,7 @@ int initialize(char *filename) /* , double *x) */
 					Str2Lower(laux);
 					if (strpos2(laux, ".meas ", 1)) {
 						sprintf(lkk, "%i", i);                                         /* to remove integer added in (*) */
-						ii=strlen(lkk);                                                /* to remove integer added in (*) */
+						ii=(int)strlen(lkk);                                           /* to remove integer added in (*) */
 						sprintf(lkk, "%s%s", "extract/", measurements[i].meas_symbol); /* to remove integer added in (*) */
 						lkk[strlen(lkk)-ii]='\0';                                      /* to remove integer added in (*) */
 						printf("initialize.c - Step4.2.1 -- .MEAS not supported in file: %s. Use .EXTRACT instead.\n", lkk);
@@ -618,7 +613,7 @@ int initialize(char *filename) /* , double *x) */
 					break;
 				case 4: /*Spectre*/
 					break;
-				case 100: /*rosen*/
+				case 100: /*general*/
 					break;
 				default:
 					printf("initialize.c - Step4.2.1 -- Something unexpected has happened!\n");
@@ -663,14 +658,14 @@ int initialize(char *filename) /* , double *x) */
 					break;
 				case 4: /*Spectre*/
 					sprintf(lkk, "%s%s", UNIQUECHAR, measurements[i].meas_symbol);
-					ccode=strlen(lkk);
+					ccode=(int)strlen(lkk);
 					while (ccode<18) {
 						strcat(lkk, " ");
 						ccode++;
 					}
 					strcat(lkk, " =");
 					break;
-				case 100: /*rosen*/
+				case 100: /*general*/
 					break;
 				default:
 					printf("initialize.c - Step4.2.2 -- Something unexpected has happened!\n");
@@ -751,7 +746,7 @@ int initialize(char *filename) /* , double *x) */
 			}
 	/*Special case to deal with Spectre MDL*/
 			break;
-		case 100: /*rosen*/
+		case 100: /*general*/
 			break;
 		default:
 			printf("initialize.c - Step4.3 -- Something unexpected has happened!\n");

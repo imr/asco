@@ -32,8 +32,9 @@
  *      4: Call optimization routine
  *      5:
  *
- * D: number of parameters of the cost function
- * x: parameters proposed by the optimizer routine are stored in 'x'
+ * D       : number of parameters of the cost function
+ * x       : parameters proposed by the optimizer routine are stored in 'x'
+ * filename: SPICE file containing the netlist to optimize
  */
 double evaluate(int D, double x[], char *filename)
 {
