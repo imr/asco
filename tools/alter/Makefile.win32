@@ -7,7 +7,7 @@ CFLAGS = -Os
 all: ../auxfunc/auxfunc.o auxfunc_alter.o alter
 
 alter:
-	$(CC) $(CFLAGS) -o alter.exe ../auxfunc/auxfunc.o auxfunc_alter.o alter.c -lm
+	$(CC) $(CFLAGS) -o alter.exe ../auxfunc/auxfunc.o auxfunc_alter.o alter.c -lm -lws2_32
 	strip alter.exe
 
 clean::

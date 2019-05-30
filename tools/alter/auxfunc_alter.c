@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2013 Joao Ramos
+ * Copyright (C) 1999-2016 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
 
 #include "auxfunc_alter.h"
 #include "auxfunc.h"
@@ -216,6 +219,7 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 						printf("auxfunc_alter.c - CreateALTERinc -- LTspice not supported\n");
 						exit(EXIT_FAILURE);
 					case 4: /*Spectre*/
+						fseek(falterINC,  0, SEEK_END);               /*properly position the pointer*/
 						break;
 					case 50: /*Qucs*/
 						printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
@@ -243,7 +247,9 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 					printf("auxfunc_alter.c - CreateALTERinc -- LTspice not supported\n");
 					break;
 				case 4: /*Spectre*/
-					fprintf(falterINC, "simulator lang=spectre\n\n");
+					if (append==0) {
+						fprintf(falterINC, "simulator lang=spectre\n\n");
+					}
 					break;
 				case 50: /*Qucs*/
 					printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
@@ -346,6 +352,24 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 											InsertString(lkk, data, l, l);
 										}
 										fprintf(falterINC, "%s\n", lkk);
+
+										//Updates <hostname>.mdl file with the required commands to execute each one of
+										//the simulation reruns by preliminary storing the information in alter[0].data[1].
+										//Data that is written to <hostname>.mdl at the end of this function.
+										if (k==0) {
+											l = strpos2(lkk, " ", 1);
+											strsub(data, lkk, 1, l-1);
+											sprintf(lkk, "\nrun %s\nrun #MDLRUN# as #MDLRUN#_%s\n", data, data);
+
+											/*data to be written to <hostname>.mdl file is temporarily stored in alter[0].data[1]*/
+											if ( ((int)strlen(alter[0].data[1]) + (int)strlen(lkk) + 1) < LONGSTRINGSIZE) {
+												strcat(alter[0].data[1], lkk);
+											} else {
+												printf("auxfunc_alter.c - CreateALTERinc -- Cannot concatenate\n");
+												exit(EXIT_FAILURE);
+											}
+										}
+
 									} else
 										fprintf(falterINC, "%s\n", alter[k].text);
 									if (!strcmp(alter[k].text, "}")) /*Detects the end of altergroup as soon as it finds '}'*/
@@ -401,5 +425,56 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 		fclose(fsweepINI);
 	if (falterINC != NULL)
 		fclose(falterINC);
+	
+	switch(spice) { /*Spectre special case to add simulation reruns to <hostname>.mdl*/
+		case 1: /*Eldo*/
+		case 2: /*HSPICE*/
+		case 3: /*LTspice*/
+			break;
+		case 4: /*Spectre*/
+			if (append==1) {
+				//get <hostname>.mdl file
+				gethostname(data, sizeof(data));
+				l = strpos2(data, ".", 1);
+				if (l) {
+					data[l]=0;
+				}
+				strcat(data, "mdl");
+				if ((falterINC=fopen(data,"r+t")) == 0) { /*create an empty file for writing*/
+					printf("auxfunc_alter.c -  CreateALTERinc -- Cannot write to output file: %s\n", data);
+					exit(EXIT_FAILURE);
+				}
+
+				//gets the simulation run name from the first line in the <hostname>.mdl file
+				fgets2(lkk, LONGSTRINGSIZE, falterINC);
+				l = strpos2(lkk, "{", 17); //start at 17 because the line is known to be 'alias measurement'
+				strsub(data, lkk, 18, l-18);
+				StripSpaces(data);
+
+				//replace #MDLKEY# with the correct simulation run name
+				for (i = 0; i < (2*alter_times); i++) {
+					l = strpos2(alter[0].data[1], "#", 1);
+					InsertString(alter[0].data[1], data, l, l+8);
+				}
+				
+				//now appends the necessary information to <hostname>.mdl
+				fseek(falterINC, 0, SEEK_END);
+				fprintf(falterINC, alter[0].data[1]);
+
+				//close the <hostname>.mdl file
+				if (falterINC != NULL)
+					fclose(falterINC);
+			}
+			break;
+		case 50: /*Qucs*/
+		case 51: /*ngspice*/
+			break;
+		case 100: /*general*/
+			printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
+			exit(EXIT_FAILURE);
+		default:
+			printf("auxfunc_alter.c - CreateALTERinc -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+	}
 
 } /*CreateALTERinc*/

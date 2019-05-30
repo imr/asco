@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2013 Joao Ramos
+ * Copyright (C) 1999-2016 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -12,7 +12,7 @@
  * global variable declarations                            */
 
 
-#define COPYRIGHT       "Copyright (c) 1999-2013 Joao Ramos"
+#define COPYRIGHT       "Copyright (c) 1999-2016 Joao Ramos"
 #define GPL_INFO        "This program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details."
 #define LONGSTRINGSIZE  4096 /* */
 #define SHORTSTRINGSIZE   64 /* */

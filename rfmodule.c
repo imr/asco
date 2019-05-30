@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2013 Joao Ramos
+ * Copyright (C) 2005-2016 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -29,7 +29,7 @@
 /*
  * Receives a SPICE line and extract the device value. Currently only
  * R/L/C devices are supported and in a very simply input format as
- * the device value is always the last paramenter in the SPICE line,
+ * the device value is always the last parameter in the SPICE line,
  * either after or before the in-line comment.
  *
  * DataSource=0 : reading from rfmodule.cfg => does not ignore characters after the in-line comment
@@ -233,7 +233,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 					sprintf(laux3, "#%s#", laux2);
 					ReadKey(laux2, laux3, fspice_cfg); /* looks for key defining the subcircuit */
 					if (strcmp(laux2, laux3)) {
-						printf("INFO:  rfmodule.c - Step1 -- %s key not found\n", laux2);
+						printf("INFO:  rfmodule.c - Step1 -- '%s' device key in '%s' not found in rfmodule.cfg\n", laux3, line);
 						exit(EXIT_FAILURE);
 					}
 
@@ -243,10 +243,10 @@ int RFModule(char *line, int optimize, FILE* fout)
 						printf("rfmodule.c - Step1 -- Incorrect line format, 'Device:' key is missing: %s\n", laux2);
 						exit(EXIT_FAILURE);
 					} else {
-						strsub(laux3, laux2, 8, (int)strlen(laux2)); /* detects device type:'resitor', 'inductor' and 'capacitor' */
+						strsub(laux3, laux2, 8, (int)strlen(laux2)); /* detects device type:'resistor', 'inductor' and 'capacitor' */
 						switch (laux3[0]) {
 							case 'r': /* resistor */
-								if (strcmp(laux3, "resitor")) {
+								if (strcmp(laux3, "resistor")) {
 									printf("rfmodule.c - Step1 -- Incorrect line format, 'resistor' key is missing: %s\n", laux2);
 									exit(EXIT_FAILURE);
 								}
@@ -375,7 +375,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 							case 3: /*LTspice*/
 								break;
 							case 4: /*Spectre*/
-								fseek(fout, -1, SEEK_CUR);
+								//fseek(fout, -1, SEEK_CUR);
 								fprintf(fout, "\nparameters ");
 								break;
 							case 50: /*Qucs*/
@@ -789,7 +789,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 								fprintf(fout, "\nparameters ");
 								break;
 							case 50: /*Qucs*/
+								break;
 							case 51: /*ngspice*/
+								break;
 							case 100: /*general*/
 								break;
 							default:
@@ -1168,6 +1170,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 				x1_value=asc2real(x1_string, 1, (int)strlen(x1_string));
 			}
 			/*'prev' and 'next' index are known at this point*/
+
 
 
 			while (strpos2(line, "=_RF_ ", 1)) { /* while there is values to replace... */

@@ -50,6 +50,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
   */
 
 #include <string.h>
+#include <errno.h>
 #include "dosdir.h"
 
 struct stat dd_sstat;  /* global stat structure of last successful file

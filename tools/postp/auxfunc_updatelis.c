@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2013 Joao Ramos
+ * Copyright (C) 1999-2016 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -19,6 +19,65 @@
 /***************************************************************/
 /*UpdateLIS ****************************************************/
 /***************************************************************/
+
+/*
+ *
+ */
+void SpectreStripSI (char *Result, char begin_char, char end_char)
+{
+	int i;
+	char laux[LONGSTRINGSIZE];
+
+	i=1; ReadSubKey(laux, Result, &i, begin_char, end_char, 5);
+
+	i=strpos2(laux, " ", 2);
+	if ((laux[i]==109)) { /* 109=m; mV */
+		laux[i-1]='\0';
+		strcat(laux, "e-3");
+	}
+	if ((laux[i]==117)) { /* 117=u; uV */
+		laux[i-1]='\0';
+		strcat(laux, "e-6");
+	}
+	if ((laux[i]==110)) { /* 110=n; nV */
+		laux[i-1]='\0';
+		strcat(laux, "e-9");
+	}
+	if ((laux[i]==112)) { /* 110=p; pV */
+		laux[i-1]='\0';
+		strcat(laux, "e-12");
+	}
+	sprintf(Result, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
+}
+
+
+
+
+/*
+ *
+ */
+void ReadKeyPrintLine(char *Result, char *key, FILE *streamIn, FILE *streamOut)
+{
+	char lkk1[LONGSTRINGSIZE];
+	char STR1[LONGSTRINGSIZE];
+
+	while ((strpos2(lkk1, key, 1) == 0) & (!P_eof(streamIn))) {
+		fgets2(lkk1, LONGSTRINGSIZE, streamIn);
+		fprintf(streamOut, "%s\n", lkk1);
+				int i;
+				i=0;
+				i=strpos2(lkk1, key, 1);
+				i++;
+	}
+
+	if (!P_eof(streamIn))
+		strcpy(Result, lkk1);
+	else
+		Result[0]='\0';
+} /*ReadKeyPrintLine*/
+
+
+
 
 /*
  *
@@ -89,7 +148,7 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
 		while (*skip[k - 1] != '\0' && PrintNoSat == TRUE) {
 			if (!strcmp(skip[k - 1], laux))      /*Is this transistor to be printed in the NOSAT.TXT?*/
 				PrintNoSat = FALSE;
-			a = strlen(skip[k - 1]);
+			a = (int)strlen(skip[k - 1]);
 			strcpy(llaux, skip[k - 1]);
 			if (llaux[a - 1] == '*') {           /*do not print those starting by ... if they have an '*' at the end*/
 				sprintf(STR1, "%.*s", (int)(a - 1), skip[k - 1]);
@@ -114,19 +173,19 @@ void DoCalculations(char *lelement, char *lVGS, char *lVDS, char *lVth, char *lV
 			}
 		}
 
-		sprintf(lOpRegion + strlen(lOpRegion), "%.*s", (int)(index[1] - index[0] - 6), empty);
+		sprintf(lOpRegion + (int)strlen(lOpRegion), "%.*s", (int)(index[1] - index[0] - 6), empty);
 
 		if (vgs > vth) {
 			sprintf(laux, "%6.3f", vgs - vth);
-			sprintf(lVovd + strlen(lVovd), "%s%.*s", laux, (int)(index[1] - index[0] - 6), empty);
+			sprintf(lVovd + (int)strlen(lVovd), "%s%.*s", laux, (int)(index[1] - index[0] - 6), empty);
 			if (vds > vdsat) {
 				sprintf(laux, "%6.3f", vds - vdsat);
-				sprintf(lVds_Vdsat + strlen(lVds_Vdsat), "%s%.*s", laux, (int)(index[1] - index[0] - 6), empty);
+				sprintf(lVds_Vdsat + (int)strlen(lVds_Vdsat), "%s%.*s", laux, (int)(index[1] - index[0] - 6), empty);
 			} else
-				sprintf(lVds_Vdsat + strlen(lVds_Vdsat), " -----%.*s", (int)(index[1] - index[0] - 6), empty);   /*LIN*/
+				sprintf(lVds_Vdsat + (int)strlen(lVds_Vdsat), " -----%.*s", (int)(index[1] - index[0] - 6), empty);   /*LIN*/
 		} else {
-			sprintf(lVovd + strlen(lVovd), " -----%.*s", (int)(index[1] - index[0] - 6), empty);                     /*OFF*/
-			sprintf(lVds_Vdsat + strlen(lVds_Vdsat), " -----%.*s", (int)(index[1] - index[0] - 6), empty);           /*OFF*/
+			sprintf(lVovd + (int)strlen(lVovd), " -----%.*s", (int)(index[1] - index[0] - 6), empty);                     /*OFF*/
+			sprintf(lVds_Vdsat + (int)strlen(lVds_Vdsat), " -----%.*s", (int)(index[1] - index[0] - 6), empty);           /*OFF*/
 		}
 
 	}
@@ -295,41 +354,45 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 
 				sprintf(laux, "%.37s", lkk);
 				if (!strcmp(laux, "0****                 OPERATING POINT")) {
-					for (i = 1; i <= 6; i++) {
+					for (i = 1; i <= 9; i++) {
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
+						if ( (strpos2(lkk, "        M", 1) != 0) || (strpos2(lkk, "        X", 1) != 0) ) /*breaks loop only if string is found*/
+							break;
+					}
+					if (i==9) {
+						printf("auxfunc_updatelis.c - Eldo netlist (%s) format has changed significantly\n", InputFile);
+						exit(EXIT_FAILURE);
 					}
 
-					while ( (strpos2(lkk, "        M", 1) != 0) || (strpos2(lkk, "        X", 1) != 0)) {   /*find operating region for all transistors*/
+					while ( (strpos2(lkk, "        M", 1) != 0) || (strpos2(lkk, "        X", 1) != 0) ) {   /*find operating region for all transistors*/
 						strcpy(lelement, lkk);
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
+						ReadKeyPrintLine(lVGS, "VGS  ", fLIS, fLJR);
+						if (!strpos2(lVGS, "VGS  ", 1)) {
+							printf("auxfunc_updatelis.c - Eldo netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDS, "VDS  ", fLIS, fLJR);
+						if (!strpos2(lVDS, "VDS  ", 1)) {
+							printf("auxfunc_updatelis.c - Eldo netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVth, "VTH  ", fLIS, fLJR);
+						if (!strpos2(lVth, "VTH  ", 1)) {
+							printf("auxfunc_updatelis.c - Eldo netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDSAT, "VDSAT  ", fLIS, fLJR);
+						if (!strpos2(lVDSAT, "VDSAT  ", 1)) {
+							printf("auxfunc_updatelis.c - Eldo netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
 
-						//if (strpos2(lkk, "region", 1) !=0) { /* Due to HSPICE 2001.2 line */
-						//	fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						//	fprintf(fLJR, "%s\n", lkk);  /* with the operation region */
-						//}
-
-						/* fgets2(lkk, LONGSTRINGSIZE, fLIS); */
-						/* fprintf(fLJR, "%s\n", lkk); */
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-
-						fgets2(lVGS, LONGSTRINGSIZE, fLIS);   /*Vgs*/
-						fprintf(fLJR, "%s\n", lVGS);
-						fgets2(lVDS, LONGSTRINGSIZE, fLIS);   /*Vds*/
-						fprintf(fLJR, "%s\n", lVDS);
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-						fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-						fprintf(fLJR, "%s\n", lVth);
-						fgets2(lVDSAT, LONGSTRINGSIZE, fLIS); /*Vdsat*/
-						fprintf(fLJR, "%s\n", lVDSAT);
-
-						for (i = 1; i <= 24; i++) {
+						while ((int)strlen(lkk)) { /*empty line has been found, goes ahead*/
+							//strcpy(laux,lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
@@ -340,10 +403,12 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fLJR, "%s\n\n\n", stats[2]);
 
 
-						for (i = 1; i <= 2; i++) {
+						for (i = 1; i <= 9; i++) {
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							if (i > 1)
+							if ((i > 1) || (int)strlen(lkk))
 								fprintf(fLJR, "%s\n", lkk);
+							if ( (strpos2(lkk, "        M", 1) != 0) || (strpos2(lkk, "        X", 1) != 0) ) /*breaks loop only if string is found, BUT unlike the code above in here it might be the last MOSTFET group*/
+								break;
 						}
 
 					}
@@ -368,9 +433,15 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 
 				sprintf(laux, "%.12s", lkk);
 				if (!strcmp(laux, "**** mosfets")) {
-					for (i = 1; i <= 4; i++) {
+					for (i = 1; i <= 9; i++) {
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
+						if (strpos2(lkk, "element  ", 1) != 0) /*breaks loop only if string is found*/
+							break;
+					}
+					if (i==9) {
+						printf("auxfunc_updatelis.c - HSPICE netlist (%s) format has changed significantly\n", InputFile);
+						exit(EXIT_FAILURE);
 					}
 
 					while (strpos2(lkk, "element  ", 1) != 0) {   /*find operating region for all transistors*/
@@ -378,31 +449,29 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-
-						if (strpos2(lkk, "region", 1) !=0) { /* Due to HSPICE 2001.2 line */
-							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							fprintf(fLJR, "%s\n", lkk);  /* with the operation region */
+						ReadKeyPrintLine(lVGS, "vgs  ", fLIS, fLJR);
+						if (!strpos2(lVGS, "vgs  ", 1)) {
+							printf("auxfunc_updatelis.c - HSPICE netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDS, "vds  ", fLIS, fLJR);
+						if (!strpos2(lVDS, "vds  ", 1)) {
+							printf("auxfunc_updatelis.c - HSPICE netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVth, "vth  ", fLIS, fLJR);
+						if (!strpos2(lVth, "vth  ", 1)) {
+							printf("auxfunc_updatelis.c - HSPICE netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDSAT, "vdsat  ", fLIS, fLJR);
+						if (!strpos2(lVDSAT, "vdsat  ", 1)) {
+							printf("auxfunc_updatelis.c - HSPICE netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
 						}
 
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-
-						fgets2(lVGS, LONGSTRINGSIZE, fLIS);   /*Vgs*/
-						fprintf(fLJR, "%s\n", lVGS);
-						fgets2(lVDS, LONGSTRINGSIZE, fLIS);   /*Vds*/
-						fprintf(fLJR, "%s\n", lVDS);
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-						fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-						fprintf(fLJR, "%s\n", lVth);
-						fgets2(lVDSAT, LONGSTRINGSIZE, fLIS); /*Vdsat*/
-						fprintf(fLJR, "%s\n", lVDSAT);
-
-						for (i = 1; i <= 12; i++) {
+						while ((int)strlen(lkk)) { /*empty line has been found, goes ahead*/
+							//strcpy(laux,lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
@@ -413,10 +482,12 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fLJR, "%s\n\n\n", stats[2]);
 
 
-						for (i = 1; i <= 4; i++) {
+						for (i = 1; i <= 9; i++) {
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							if (i > 2)
+							if ((i > 2) || (int)strlen(lkk))
 								fprintf(fLJR, "%s\n", lkk);
+							if (strpos2(lkk, "element  ", 1)) /*breaks loop only if string is found, BUT unlike the code above in here it might be the last MOSTFET group*/
+								break;
 						}
 
 					}
@@ -436,9 +507,15 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 
 				sprintf(laux, "%.21s", lkk);
 				if (!strcmp(laux, "--- BSIM3 MOSFETS ---")) {
-					for (i = 1; i <= 1; i++) {
+					for (i = 1; i <= 9; i++) {
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
+						if (strpos2(lkk, "Name:  ", 1) != 0) /*breaks loop only if string is found*/
+							break;
+					}
+					if (i==9) {
+						printf("auxfunc_updatelis.c - LTspice netlist (%s) format has changed significantly\n", InputFile);
+						exit(EXIT_FAILURE);
 					}
 
 					while (strpos2(lkk, "Name:  ", 1) != 0) {   /*find operating region for all transistors*/
@@ -446,45 +523,46 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fgets2(lkk, LONGSTRINGSIZE, fLIS);
 						fprintf(fLJR, "%s\n", lkk);
 
-						//fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						//fprintf(fLJR, "%s\n", lkk);
+						ReadKeyPrintLine(lVGS, "Vgs:  ", fLIS, fLJR);
+						if (!strpos2(lVGS, "Vgs:  ", 1)) {
+							printf("auxfunc_updatelis.c - LTspice netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDS, "Vds:  ", fLIS, fLJR);
+						if (!strpos2(lVDS, "Vds:  ", 1)) {
+							printf("auxfunc_updatelis.c - LTspice netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVth, "Vth:  ", fLIS, fLJR);
+						if (!strpos2(lVth, "Vth:  ", 1)) {
+							printf("auxfunc_updatelis.c - LTspice netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
+						ReadKeyPrintLine(lVDSAT, "Vdsat:  ", fLIS, fLJR);
+						if (!strpos2(lVDSAT, "Vdsat:  ", 1)) {
+							printf("auxfunc_updatelis.c - LTspice netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
+						}
 
-						//if (strpos2(lkk, "region", 1) !=0) { /* Due to HSPICE 2001.2 line */
-						//	fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						//	fprintf(fLJR, "%s\n", lkk);  /* with the operation region */
-						//}
-
-						//fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						//fprintf(fLJR, "%s\n", lkk);
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-
-						fgets2(lVGS, LONGSTRINGSIZE, fLIS);   /*Vgs*/
-						fprintf(fLJR, "%s\n", lVGS);
-						fgets2(lVDS, LONGSTRINGSIZE, fLIS);   /*Vds*/
-						fprintf(fLJR, "%s\n", lVDS);
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-						fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-						fprintf(fLJR, "%s\n", lVth);
-						fgets2(lVDSAT, LONGSTRINGSIZE, fLIS); /*Vdsat*/
-						fprintf(fLJR, "%s\n", lVDSAT);
-
-						for (i = 1; i <= 17; i++) {
+						while (lkk[0]!='\r') { /*empty line has been found, goes ahead*/
+							//strcpy(laux,lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
+						fseek(fLJR, -2, SEEK_CUR); /*properly position the pointer*/
 
 						DoCalculations(lelement, lVGS, lVDS, lVth, lVDSAT, Vovd, Voff, Vdst, stats, &fNoSat); /*gets three lines with operating region*/
 						fprintf(fLJR, "%s\n", stats[0]);
 						fprintf(fLJR, "%s\n", stats[1]);
-						fprintf(fLJR, "%s\n\n", stats[2]);
+						fprintf(fLJR, "%s\n\r\n", stats[2]);
 
 
-						for (i = 1; i <= 2; i++) {
+						for (i = 1; i <= 9; i++) {
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							if (i > 1)
+							if ((i > 1) || (int)strlen(lkk))
 								fprintf(fLJR, "%s\n", lkk);
+							if (strpos2(lkk, "Name:  ", 1)) /*breaks loop only if string is found, BUT unlike the code above in here it might be the last MOSTFET group*/
+								break;
 						}
 
 					}
@@ -514,7 +592,8 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 				char l1[LONGSTRINGSIZE], l2[LONGSTRINGSIZE]; /*l1 and l2 are hold places for previous lines*/
 				fgets2(l1, LONGSTRINGSIZE, fLIS); fprintf(fLJR, "%s\n", l1);
 				fgets2(l2, LONGSTRINGSIZE, fLIS); fprintf(fLJR, "%s\n", l2);
-/*bsim3v3*/			while ((strcmp((sprintf(laux, "%.18s", lkk), laux), "Primitive: bsim3v3") != 0) & (!P_eof(fLIS))) {
+				while ((strcmp((sprintf(laux, "%.15s", lkk), laux), "Primitive: bsim") != 0) & (!P_eof(fLIS))) {
+/*bsim3v3*/ //			while ((strcmp((sprintf(laux, "%.18s", lkk), laux), "Primitive: bsim3v3") != 0) & (!P_eof(fLIS))) {
 /*bsim4*/ //			while ((strcmp((sprintf(laux, "%.16s", lkk), laux), "Primitive: bsim4") != 0) & (!P_eof(fLIS))) {
 					strcpy(l1, l2);
 					strcpy(l2, lkk);
@@ -527,8 +606,10 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 					}
 				}
 				
-/*bsim3v3*/			sprintf(laux, "%.18s", lkk);
-/*bsim3v3*/			if (!strcmp(laux, "Primitive: bsim3v3")) {
+				sprintf(laux, "%.15s", lkk);
+				if (!strcmp(laux, "Primitive: bsim")) {
+/*bsim3v3*/ //			sprintf(laux, "%.18s", lkk);
+/*bsim3v3*/ //			if (!strcmp(laux, "Primitive: bsim3v3")) {
 /*bsim4*/ //			sprintf(laux, "%.16s", lkk);
 /*bsim4*/ //			if (!strcmp(laux, "Primitive: bsim4")) {
 					for (i = 1; i <= 0; i++) {
@@ -536,126 +617,45 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fLJR, "%s\n", lkk);
 					}
 
-/*bsim3v3*/				while (strpos2(lkk, "Primitive: bsim3v3", 1) != 0) {   /*find operating region for all transistors*/
+					while (strpos2(lkk, "Primitive: bsim", 1) != 0) {   /*find operating region for all transistors*/
+/*bsim3v3*/ //				while (strpos2(lkk, "Primitive: bsim3v3", 1) != 0) {   /*find operating region for all transistors*/
 /*bsim4*/ //				while (strpos2(lkk, "Primitive: bsim4", 1) != 0) {   /*find operating region for all transistors*/
 						strcpy(lelement, l1);
 						if (strpos2(lelement, " of ", 1)) { /*to remove the library name if and when it appears*/
 							lelement[strpos2(lelement, " of ", 1)]='\0';
 						}
-/*bsim3v3*/					for (i = 1; i <= 9; i++) {
-/*bsim4*/ //					for (i = 1; i <= 7; i++) {
-							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-							fprintf(fLJR, "%s\n", lkk);
-						}
 
-						fgets2(lVGS, LONGSTRINGSIZE, fLIS);   /*Vgs*/
-						fprintf(fLJR, "%s\n", lVGS);
-						{
-						i=1; ReadSubKey(laux, lVGS, &i, '=', 'V', 5);
-						i=strpos2(laux, " ", 2);
-						if ((laux[i]==109)) { /* 109=m; mV */
-							laux[i-1]='\0';
-							strcat(laux, "e-3");
+						ReadKeyPrintLine(lVGS, "vgs = ", fLIS, fLJR);
+						if (!strpos2(lVGS, "vgs = ", 1)) {
+							printf("auxfunc_updatelis.c - Spectre netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
 						}
-						if ((laux[i]==117)) { /* 117=u; uV */
-							laux[i-1]='\0';
-							strcat(laux, "e-6");
+						SpectreStripSI(lVGS, '=', 'V');
+						ReadKeyPrintLine(lVDS, "vds = ", fLIS, fLJR);
+						if (!strpos2(lVDS, "vds = ", 1)) {
+							printf("auxfunc_updatelis.c - Spectre netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
 						}
-						if ((laux[i]==110)) { /* 110=n; nV */
-							laux[i-1]='\0';
-							strcat(laux, "e-9");
+						SpectreStripSI(lVDS, '=', 'V');
+						ReadKeyPrintLine(lVth, "vth = ", fLIS, fLJR);
+						if (!strpos2(lVth, "vth = ", 1)) {
+							printf("auxfunc_updatelis.c - Spectre netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
 						}
-						sprintf(lVGS, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
+						SpectreStripSI(lVth, '=', 'V');
+						ReadKeyPrintLine(lVDSAT, "vdsat = ", fLIS, fLJR);
+						if (!strpos2(lVDSAT, "vdsat = ", 1)) {
+							printf("auxfunc_updatelis.c - Spectre netlist (%s) format has changed significantly\n", InputFile);
+							exit(EXIT_FAILURE);
 						}
-						fgets2(lVDS, LONGSTRINGSIZE, fLIS);   /*Vds*/
-						fprintf(fLJR, "%s\n", lVDS);
-						{
-						i=1; ReadSubKey(laux, lVDS, &i, '=', 'V', 5);
-						i=strpos2(laux, " ", 2);
-						if ((laux[i]==109)) { /* 109=m; mV */
-							laux[i-1]='\0';
-							strcat(laux, "e-3");
-						}
-						if ((laux[i]==117)) { /* 117=u; uV */
-							laux[i-1]='\0';
-							strcat(laux, "e-6");
-						}
-						if ((laux[i]==110)) { /* 110=n; nV */
-							laux[i-1]='\0';
-							strcat(laux, "e-9");
-						}
-						sprintf(lVDS, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
-						}
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						fprintf(fLJR, "%s\n", lkk);
-						fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-						fprintf(fLJR, "%s\n", lVth);
-					{ //begin -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
-						if (!strpos2(lVth, "vth =", 1)) {
-							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-							fprintf(fLJR, "%s\n", lVth);
-							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-							fprintf(fLJR, "%s\n", lVth);
-							fgets2(lVth, LONGSTRINGSIZE, fLIS);   /*Vth*/
-							fprintf(fLJR, "%s\n", lVth);
-						}
-						if (!strpos2(lVth, "vth =", 1)) { /*Double-check just to be sure that vth was found*/
-								printf("auxfunc_updatelis.c - Spectre netlist format not supported\n");
-								exit(EXIT_FAILURE);
-						}
-					} //end -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
-						{
-						i=1; ReadSubKey(laux, lVth, &i, '=', 'V', 5);
-						i=strpos2(laux, " ", 2);
-						if ((laux[i]==109)) { /* 109=m; mV */
-							laux[i-1]='\0';
-							strcat(laux, "e-3");
-						}
-						if ((laux[i]==117)) { /* 117=u; uV */
-							laux[i-1]='\0';
-							strcat(laux, "e-6");
-						}
-						if ((laux[i]==110)) { /* 110=n; nV */
-							laux[i-1]='\0';
-							strcat(laux, "e-9");
-						}
-						sprintf(lVth, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
-						}
-						fgets2(lVDSAT, LONGSTRINGSIZE, fLIS); /*Vdsat*/
-						fprintf(fLJR, "%s\n", lVDSAT);
-						{
-						i=1; ReadSubKey(laux, lVDSAT, &i, '=', 'V', 5);
-						i=strpos2(laux, " ", 2);
-						if ((laux[i]==109)) { /* 109=m; mV */
-							laux[i-1]='\0';
-							strcat(laux, "e-3");
-						}
-						if ((laux[i]==117)) { /* 117=u; uV */
-							laux[i-1]='\0';
-							strcat(laux, "e-6");
-						}
-						if ((laux[i]==110)) { /* 110=n; nV */
-							laux[i-1]='\0';
-							strcat(laux, "e-9");
-						}
-						sprintf(lVDSAT, "          %s", laux); /* Puts the value on the expected column for DoCalculations */
-						}
+						SpectreStripSI(lVDSAT, '=', 'V');
 
-						for (i = 1; i <= 45; i++) {
+						while ((int)strlen(lkk)) { /*empty line has been found, goes ahead*/
+							//strcpy(laux,lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							fprintf(fLJR, "%s\n", lkk);
 						}
-					{ //begin -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
-						fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						//fprintf(fLJR, "%s\n", lkk);
-						//if ((int)(strlen(InputFile))) { /*empty line has been found, goes ahead*/
-						//	i=0;
-						//}
-						while (strpos2(lkk, " = ", 1)) { /*empty line has been found, goes ahead*/
-							fprintf(fLJR, "%s\n", lkk);
-							fgets2(lkk, LONGSTRINGSIZE, fLIS);
-						}
-					} //end -- required for versions after the 2nd half of 2006 who have 3 more lines in between "vds" and "vth"
+						fseek(fLJR, -1, SEEK_CUR); /*properly position the pointer*/
 
 						DoCalculations(lelement, lVGS, lVDS, lVth, lVDSAT, Vovd, Voff, Vdst, stats, &fNoSat); /*gets three lines with operating region*/
 						fprintf(fLJR, "%s\n", stats[0]);
@@ -663,13 +663,14 @@ void UpdateLIS(char *ConfigFile, char *InputFile)
 						fprintf(fLJR, "%s\n\n", stats[2]);
 
 
-
-						for (i = 1; i <= 3; i++) {
+						for (i = 1; i <= 9; i++) {
 							strcpy(l1, l2);
 							strcpy(l2, lkk);
 							fgets2(lkk, LONGSTRINGSIZE, fLIS);
 							if (i > 0)
 								fprintf(fLJR, "%s\n", lkk);
+							if (strpos2(lkk, "Primitive: bsim", 1)) /*breaks loop only if string is found, BUT unlike the code above in here it might be the last MOSTFET group*/
+								break;
 						}
 
 					}
