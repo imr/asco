@@ -1,9 +1,18 @@
+ASCO 0.3.11: December 26, 2005
+    * 'alter', ' monte' and 'postp' analysis tools added
+    * Code clean-up
+
+    Manual:
+    * 'Chapter 7, Tools and Modules' includes new tools
+
+
+
+
 ASCO 0.3.10: November 28, 2005
     * Initial support for Spectre
     * 'log' analysis tool added
     * Minor bug fixes
     * Code clean-up
-
 
     Manual:
     * # Post Processing # documented and sub-section 'Extract Commands' rearranged
@@ -16,4 +25,56 @@ ASCO 0.3.10: November 28, 2005
 
 
 ASCO 0.3.9: October 27, 2005
-    * Initial release
+    * First public release
+
+
+
+
+ASCO 0.3.8: August 2, 2005
+    * ASCO name used for the first time
+    * Add support for LTSpice simulator
+    * Major code clean-up and modularization
+    * About 5000 lines, including the DE code.
+
+
+
+
+version 0.3.3: July 12, 2005
+    * Add support for HSPICE simulator.
+
+
+
+
+version 0.3.0: July 4, 2005
+    * Autonomous optimization using the differential evolution (DE) algorithm
+      from Rainer Storn and Ken Price
+    * Less than 2700 lines, including the DE code.
+
+
+
+
+version 0.2.5: June 28, 2005
+    * Code base divided into multiple files
+
+
+
+
+version 0.2.0: September 4, 2004
+    * Implement process-voltage-temperature variations
+    * One file with less than 850 lines plus external functions
+
+
+
+
+version 0.1.0: July 17, 2004
+    * Code base divided in two major functions.
+    * Can read and write a variable number of optimization variables
+    * About 550 lines plus external functions
+
+
+
+
+version 0.0.1: June 25, 2004
+    * The first version with less than 500 lines and supporting only Eldo
+      Rudimentary operation using simulated annealing optimization algorithm
+      implemented in Octave

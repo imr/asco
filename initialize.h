@@ -77,6 +77,7 @@ measurements_line measurements[MAXMEASUREMENTS]; /**/
  * 1  1 (3) => ALTER + MC
  */
 int AlterMC;           /* execute AlterMC simulation? yes, no */
-double AlterMCmincost; /* execute AlterMC simulation if the last cost is smaller than this value. */
+double AlterMCcost;    /* execute AlterMC simulation if the last cost is smaller than this value. */
 double Wobj, Wcon;     /* weights for the cost due to the objectives and constraints */
+int ExecuteRF; /* add parasitics using the RF module? yes, no */
 /*Think on merging the above variables*/

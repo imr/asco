@@ -185,7 +185,7 @@ char *DecodeSymbolNode(char *ret, int i)
  */
 int initialize(char *filename) /* , double *x) */
 {
-	int i, ii, ccode;;
+	int i, ii, ccode;
 	char laux[LONGSTRINGSIZE], laux2[SHORTSTRINGSIZE], hostname[SHORTSTRINGSIZE] = {0};
 
 	/*   <inputfile>.*   <inputfile>.cfg <hostname>.tmp /extract/<file> */
@@ -202,14 +202,14 @@ int initialize(char *filename) /* , double *x) */
 	if (strcmp(lkk, "#Optimization Flow#")) {
 		printf("INFO:  initialize.c - Step1 -- #Optimization Flow# key not found\n");
 	} else {
-		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);      /*should Alter be done?*/
+		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg); /*should Alter be done?*/
 		Str2Lower(lkk);
 		ii=1;
 		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);
-		if (!strcmp(laux, "yes"))               /* Alter==yes */
+		if (!strcmp(laux, "yes"))         /* Alter==yes */
 			AlterMC+=2;
 		else {
-			if (strcmp(laux, "no")) {       /* Alter!=no  */
+			if (strcmp(laux, "no")) { /* Alter!=no  */
 				printf("initialize.c - Step1 -- Incorrect line format: %s\n", lkk);
 				exit(EXIT_FAILURE);
 			}
@@ -219,10 +219,10 @@ int initialize(char *filename) /* , double *x) */
 		Str2Lower(lkk);
 		ii=1;
 		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);
-		if (!strcmp(laux, "yes"))               /*MonteCarlo==yes*/
+		if (!strcmp(laux, "yes"))         /*MonteCarlo==yes*/
 			AlterMC+=1;
 		else {
-			if (strcmp(laux, "no")) {       /*MonteCarlo!=no*/
+			if (strcmp(laux, "no")) { /*MonteCarlo!=no*/
 				printf("initialize.c - Step1 -- Incorrect line format: %s\n", lkk);
 				exit(EXIT_FAILURE);
 			}
@@ -231,14 +231,27 @@ int initialize(char *filename) /* , double *x) */
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
 		ii=1;
 		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);
-		AlterMCmincost=asc2real(laux, 1, (int)strlen(laux));
-		if (AlterMCmincost < 0) {
-			printf("initialize.c - Step1 -- Minumum cost=%f, should be >= 0\n", AlterMCmincost);
+		AlterMCcost=asc2real(laux, 1, (int)strlen(laux));
+		if (AlterMCcost < 0) {
+			printf("initialize.c - Step1 -- Minumum cost=%f, should be >= 0\n", AlterMCcost);
 		exit(EXIT_FAILURE);
 		}
 		#ifdef DEBUG
-		AlterMCmincost=1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
+		AlterMCcost=1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
 		#endif
+
+		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg); /*should RF parasitics be added?*/
+		Str2Lower(lkk);
+		ii=1;
+/*		ReadSubKey(laux, lkk, &ii, ':', ' ', 4);                                            */
+		if (!strcmp(laux, "yes"))         /*RF==yes*/
+			ExecuteRF=1;
+		else {
+			if (strcmp(laux, "no")) { /*RF!=no*/
+/*				printf("initialize.c - Step1 -- Incorrect line format: %s\n", lkk); */
+/*				exit(EXIT_FAILURE);                                                 */
+			}
+		}
 	}
 
 

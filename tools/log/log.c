@@ -6,10 +6,10 @@
  */
 
 #include <stdio.h>
-//#include <ctype.h>
+/* #include <ctype.h> */
 #include <math.h>
-//#include <setjmp.h>
-//#include <assert.h>
+/* #include <setjmp.h> */
+/* #include <assert.h> */
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,20 +20,21 @@
 
 
 
-
 /*##############################################################################*/
 /*################      M A I N              P R O G R A M      ################*/
 /*##############################################################################*/
 int main(int argc, char *argv[])
 {
-	//
-	// Step1: Check input arguments
+	/**/
+	/*Step1: Check input arguments*/
 	if (argc != 3) { /* number of arguments */
 		printf("\nUsage : log <inputfile>.log <outputfile>\n\n\n");
 	exit(EXIT_FAILURE);
 	}
 
-	CreateStatistics(argv[1], argv[2]);
 
+	/**/
+	/*Step2: */
+	CreateStatistics(argv[1], argv[2]);
 	exit(EXIT_SUCCESS);
 }

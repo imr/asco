@@ -84,7 +84,7 @@ void SimpleParametersCategory(int num_measures, char *llog, statistics stats, FI
 
 	fprintf(*fOut, "\n\n");
 	llog[0]=58; //':'
-	j=0;
+	j=1;
 	for (i = 1; i <= (num_measures); i=i+2) {
 		ReadSubKey(lkk1, llog, &j, ':', ':', 0);
 		StripSpaces(lkk1);
@@ -110,18 +110,18 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(*fcfg))) {
 			i=strpos2(lkk, ":OPT", 1);
 			if (i) { //line with OPT
-				j=0;
+				j=1;
 				ReadSubKey(lkk1, lkk, &j, '#', '#', 5); //lkk1=symbol
 				lkk2[0]='\0';
 				i=0;
-				j=0;
+				j=1;
 				while (strcmp (lkk1, lkk2)) {
 					i++;
 					ReadSubKey(lkk2, llog, &j, ':', ':', 0);
 					StripSpaces(lkk2);
 				}
 				i++; //the correct possition of the value
-				j=0;
+				j=1;
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
 				strsub(lkk1, lkk, 1, j);
@@ -178,7 +178,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	fgets2(lkk, LONGSTRINGSIZE, fIn);
 	strsub(lkk1, lkk, 1, strpos2(lkk, ";", 1)-1);
 
-	i=0; j=0; k=0;
+	i=0; j=1; k=0;
 	while (!P_eof(fIn)) {
 		aux = asc2real(lkk1, 1, (int)strlen(lkk1));
 		stats.avg[i] += aux;
@@ -190,7 +190,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 			stats.min[i] = aux;
 		if (j==strlen(lkk)) {
 			num_measures=i;
-			i=0;j=0;k++;
+			i=0;j=1;k++;
 			fgets2(lkk, LONGSTRINGSIZE, fIn);
 			strsub(lkk1, lkk, 1, strpos2(lkk, ":", 1)-1);
 		} else {

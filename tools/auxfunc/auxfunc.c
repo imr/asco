@@ -128,11 +128,6 @@ void fgets2(char *s, int n, FILE *stream)
 	TEMP = strchr(s, '\n');
 	if (TEMP != NULL)
 		*TEMP = 0;
-	
-	if (strlen (s)>LONGSTRINGSIZE-2) {
-		printf("auxfunc.c - fgets2 -- maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
-		exit(EXIT_FAILURE);
-	}
 } /*fgets2*/
 
 

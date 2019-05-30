@@ -76,8 +76,10 @@
 **  5 + 3.6  +10/1/96+   -     + strategy indic. improved  +  Storn **
 **                                                                  **
 ***H*O*C*E***********************************************************/
+#include <string.h>
 
-# include "de.h"
+
+#include "de.h"
 #include "auxfunc.h"
 #include "initialize.h"
 

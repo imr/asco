@@ -14,7 +14,7 @@
 #include "auxfunc.h"
 
 
-/* void WriteToMem(int num_measures){} */
+void WriteToMem(int num_measures){}
 
 /***************************************************************/
 /*MeasureFromLIS ***********************************************/

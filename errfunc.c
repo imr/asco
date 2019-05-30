@@ -149,6 +149,10 @@ double CostFunction()
 		}
 		i++;
 	}
+	if (cost<0) { //Minimum possible cost is '0'. MUST exit otherwise!
+		printf("errfunc.c - CostFunction -- Cost cannot be negative!\n");
+		exit(EXIT_FAILURE);
+	}
 	return (cost);
 }
 
@@ -258,7 +262,7 @@ void WriteToMem(int num_measures)
 	char laux[LONGSTRINGSIZE];
 	double currentcost;
 	
-	DoMath(num_measures);   /*'MATH=#...'; information is in the variable 'measured_data'*/
+	DoMath(num_measures); /*'MATH=&...'; information is in the variable 'measured_data'*/
 	
 	i=1;
 	j=0;
@@ -545,7 +549,7 @@ double errfunc(char *filename, double *x)
 	#ifdef DEBUG
 	printf("DEBUG: errfunc.c - Step7\n");
 	#endif
-	if ( ((AllConstraintsMet()) || (AlterMCmincost > maxcost)) && (AlterMC)) {
+	if ( ((AllConstraintsMet()) || (AlterMCcost > maxcost)) && (AlterMC)) {
 
 		switch (AlterMC) {
 			case 1: /*Monte Carlo simulation*/
