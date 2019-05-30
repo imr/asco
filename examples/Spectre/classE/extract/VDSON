@@ -1,0 +1,12 @@
+# Info #
+Name:VDSON
+Symbol:ZVDSON
+Unit:V
+Analysis type:TRAN
+Definition:Drain voltage before turn-off
+Note:
+#
+
+# Commands #
+export real #SYMBOL#=V(#NODE#)@(TMEAS_STOP - INP_PERIOD / 2)
+#

@@ -1,0 +1,12 @@
+# Info #
+Name:VHIGH
+Symbol:ZVHIGH
+Unit:V
+Analysis type:TRAN
+Definition:High voltage level
+Note:
+#
+
+# Commands #
+export real #SYMBOL#=V(#NODE#)@TMEAS_2
+#

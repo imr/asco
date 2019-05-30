@@ -1,18 +1,18 @@
 /*
- *  Copyright (C) 2004-2005 Joao Ramos
+ * Copyright (C) 2004-2005 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE' and 'LTSpice' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
  *
  */
 
 #include <stdio.h>
-//#include <ctype.h>
+/* #include <ctype.h> */
 #include <math.h>
-//#include <setjmp.h>
-//#include <assert.h>
+/* #include <setjmp.h> */
+/* #include <assert.h> */
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -38,13 +38,13 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 	double cost;
 
 
-	//
-	// Step1: Initialization of all variables and strucutres
+	/**/
+	/*Step1: Initialization of all variables and strucutres*/
 	(*nfeval)++;
 
 
-	//
-	// Step2: return a high cost if proposed values are not within [-10, 10] range except for the first call
+	/**/
+	/*Step2: return a high cost if proposed values are not within [-10, 10] range except for the first call*/
 	#ifndef DEBUG
 	cost=0;
 	for (ii = 0; ii < D; ii++) {
@@ -60,8 +60,8 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 	#endif
 
 
-	//
-	//Step3: use initial values stored in the <inputfile>.cfg file
+	/**/
+	/*Step3: use initial values stored in the <inputfile>.cfg file*/
 	#ifndef DEBUG
 	if (*nfeval==1) {
 	#else
@@ -74,8 +74,8 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 
 
 
-	//
-	//Step4: call optimization routine
+	/**/
+	/*Step4: call optimization routine*/
 	if (spice) {
 		#ifdef DEBUG
 		printf("DEBUG: evaluate.c - Executing errfunc\n");
@@ -86,10 +86,11 @@ double evaluate(int D, double x[], long *nfeval, char *filename)
 		printf("DEBUG: evaluate.c - Leaving errfunc\n");
 		printf("INFO:  evaluate.c - altermc=%d\n", AlterMC);
 		#endif
-		//printf("cost=%f\n", cost);
+		/*printf("cost=%f\n", cost);*/
 	}
-	
-	//
-	//Step5:
+
+
+	/**/
+	/*Step5: */
 	return(cost);
 }

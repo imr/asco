@@ -1,0 +1,13 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Output power at the main frequency
+Note:
+#
+
+# Commands #
+export real fft_mag=mag(fft(V(#NODE#), TMEAS_START, TMEAS_STOP, 1024)@INP_FREQ)
+export real #SYMBOL#=(fft_mag*fft_mag)/2/FILT_RES
+#

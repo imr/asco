@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2005 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -21,7 +21,7 @@
 
 /*
  *
- */
+*/
 void read_sweep_vars(char *Result, char *data)
 {
 	if (data[strlen(data) - 1] == ']') {
@@ -29,7 +29,7 @@ void read_sweep_vars(char *Result, char *data)
 	}
 
 	strcpy(Result, data);
-}  /*read_sweep_vars*/
+} /*read_sweep_vars*/
 
 
 
@@ -48,8 +48,8 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 	int ptr, num_lines, index, alter_times;
 
 
-	//
-	// Zero variables
+	/**/
+	/*Zero variables*/
 	for (i = 0; i <= ALTERLINES-1; i++) {
 		*alter[i].text = '\0';
 		for (j = 0; j <= SWEEPVARS-1; j++)
@@ -62,27 +62,27 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 	}
 
 
-	//
-	// Open input and output files
+	/**/
+	/*Open input and output files*/
 	if ((fsweepINI=fopen(ConfigFile,"rt")) == 0) {
 		printf("auxfunc_alter.c - Cannot open config file: %s\n", ConfigFile);
 		exit(EXIT_FAILURE);
 	}
 	if (append) {
-		if ((falterINC=fopen(OutputFile,"r+t")) == 0) { //append to a file
+		if ((falterINC=fopen(OutputFile,"r+t")) == 0) { /*append to a file*/
 			printf("auxfunc_alter.c - Cannot write to output file: %s\n", OutputFile);
 			exit(EXIT_FAILURE);
 		}
 	} else {
-		if ((falterINC=fopen(OutputFile,"wt")) == 0) { //create an empty file for writing
+		if ((falterINC=fopen(OutputFile,"wt")) == 0) { /*create an empty file for writing*/
 			printf("auxfunc_alter.c - Cannot write to output file: %s\n", OutputFile);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 
-	//
-	//
+	/**/
+	/**/
 	ReadKey(lkk, "# ALTER #", fsweepINI);
 	if (!lkk[0]) {
 		printf("auxfunc_alter.c - # ALTER # key not found\n");
@@ -147,8 +147,8 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 		num_lines = i - 1;
 
 
-		//
-		//
+		/**/
+		/**/
 		alter_times = 1;   /*alter_times: how many simulations?*/
 		kk = 0;
 		for (i = 0; i < num_lines; i++) {
@@ -167,7 +167,7 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			fseek(falterINC, -5, SEEK_END);               //properly position the pointer
+			fseek(falterINC, -5, SEEK_END);               /*properly position the pointer*/
 			for (index = 1; index <= alter_times; index++) {
 				add = 1;   /*build ( [1111] [1112] [1113] [1121] ...*/
 				for (jj = kk - 1; jj >= 0; jj--) {
@@ -188,7 +188,7 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 				fprintf(falterINC, ".ALTER @%d -> ", index);
 				for (k = 0; k < num_lines; k++) {
 					if (*alter[k].data[0] != '\0') {
-						strcpy(data, alter[k].text + 0);   // previously it had '1', but with '0' nothing is removed
+						strcpy(data, alter[k].text + 0);   /*previously it had '1', but with '0' nothing is removed*/
 						fputs(data, falterINC);
 						l = order[j - 1];
 						j++;
@@ -219,4 +219,4 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 	if (falterINC != NULL)
 		fclose(falterINC);
 
-}  /*CreateALTERinc*/
+} /*CreateALTERinc*/

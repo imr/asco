@@ -1,0 +1,34 @@
+//Digital inverter
+
+parameters V_SUPPLY = #V_SUPPLY#
+parameters INP_FREQ = #INP_FREQ#
+parameters INP_PERIOD = 1/INP_FREQ
+parameters NO_PERIODS = 4
+parameters TMEAS_START = (NO_PERIODS-1)*INP_PERIOD
+parameters TMEAS_STOP = (NO_PERIODS)*INP_PERIOD
+parameters TMEAS_1 = TMEAS_STOP -3*INP_PERIOD/4
+parameters TMEAS_2 = TMEAS_STOP -1*INP_PERIOD/4
+
+*** *** SUPPLY VOLTAGES *** ***
+VVDD (VDD 0) vsource dc=V_SUPPLY
+VVSS (VSS 0) vsource dc=0
+
+*** *** INPUT SIGNAL *** ***
+VSIG (IN VSS) vsource type=pulse val0=V_SUPPLY val1=0 delay=INP_PERIOD / 2 rise=INP_PERIOD
++ / 1000 fall=INP_PERIOD / 1000 width=INP_PERIOD / 2 period=INP_PERIOD
+
+*** *** CIRCUIT *** ***
+Mp (OUT IN VDD VDD) pmos w=#WP# l=#LMIN#
+Mn (OUT IN VSS VSS) nmos w=#WP# / 3 l=#LMIN#
+
+CL (OUT VSS) capacitor c=10p
+
+*** *** ANALYSIS *** ***
+analysisTran1 tran step=INP_PERIOD / 1000 stop=NO_PERIODS * INP_PERIOD
+*
+save IN
+save OUT
+sppSaveOptions options save=allpub
+include "p.typ"
+include "n.typ"
+// End of Netlist

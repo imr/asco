@@ -1,0 +1,19 @@
+ASCO 0.3.10: November 28, 2005
+    * Initial support for Spectre
+    * 'log' analysis tool added
+    * Minor bug fixes
+    * Code clean-up
+
+
+    Manual:
+    * # Post Processing # documented and sub-section 'Extract Commands' rearranged
+    * Section 'LTSpice Examples' .... dos2unix
+    * Chapter 7, started and 'log' tool documented
+    * 'Eldo Examples', 'Digital inverter' includes 'log' example
+    * Initial support for Spectre added
+
+
+
+
+ASCO 0.3.9: October 27, 2005
+    * Initial release

@@ -1,0 +1,50 @@
+//Class-E power amplifier
+
+parameters V_SUPPLY=2.000000e+00
+parameters INP_FREQ=#INP_FREQ#
+parameters INP_PERIOD=1 / INP_FREQ
+parameters NO_PERIODS=#NO_PERIODS#
+parameters TMEAS_START=(NO_PERIODS - 1) * INP_PERIOD
+parameters TMEAS_STOP=(NO_PERIODS) * INP_PERIOD
+parameters T_PERC=99
+parameters TMEAS_AUX=(NO_PERIODS - 1) * INP_PERIOD
++                    + T_PERC / 100 * INP_PERIOD
+
+*** *** SUPPLY VOLTAGES *** ***
+* Voltages and currents
+VVDD ( VDD 0 ) vsource dc=V_SUPPLY
+VVSS ( VSS 0 ) vsource dc=0
+
+*** *** INPUT SIGNAL *** ***
+VSIG ( G1 VSS ) vsource type=pulse val0=V_SUPPLY val1=0 delay=INP_PERIOD / 2 rise=INP_PERIOD
++ / 1000 fall=INP_PERIOD / 1000 width=INP_PERIOD / 2 period=INP_PERIOD
+
+*** *** INDUCTOR *** ***
+subckt LBOND\.SUB ( in OUT )
+parameters l=1
+RBOND ( in 1 ) resistor r=0.135 * (l / 1n) //  0.135 ohm/mm; gold
+LBOND ( 1 OUT ) inductor l=l //  1 nh/mm
+ends LBOND\.SUB
+
+*** *** OUTPUT STAGE *** ***
+* Diffusion length, MOSwidth, MOSlength and multiplier
+parameters ldiff=1.2u ws=#TR1_W# ls=#LMIN# ms=1
+M1 ( D1 G1 VSS VSS ) nmos w=ws l=ls m=ms ad=ws*ldiff pd=2*(ldiff + ws)
++                                        as=ws*ldiff ps=2*(ldiff + ws)
+
+XL1 ( VDD D1 ) LBOND\.SUB  l=#L1#
+XL0 ( D1 N2 ) LBOND\.SUB  l=#L0#
+C0 ( N2 OUT ) capacitor c=#C0#
+
+parameters FILT_RES=#RL#
+R ( OUT VSS ) resistor r=FILT_RES
+
+*** *** ANALYSIS *** ***
+analysisTran1 tran step=INP_PERIOD / 1000 stop=(NO_PERIODS + 1) * INP_PERIOD
+save G1
+save D1
+save OUT
+//analysisOP1 dc oppoint=logfile
+sppSaveOptions options save=allpub
+include "n.typ"
+// End of Netlist

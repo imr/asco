@@ -1,0 +1,15 @@
+# Info #
+Name:AMP3 Slew rate
+Symbol:ZSR
+Unit:V/s
+Analysis type:AC
+Definition:SR_CALC = GBW*pi*(VGS-VT)
+Note:
+#
+
+# Commands #
+export real vgs=(xopamp\.m11\:vgs)
+export real vth=(xopamp\.m11\:vth)
+export real UGF=cross(sig=db(V(#NODE#))-0, dir='cross, n=1)
+export real #SYMBOL#=UGF*3.14*abs(vgs-vth)
+#

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2005 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -9,9 +9,9 @@
  * 
  * 
  * Credit is given here to the author of the translation program
- * 
+ *
  * "p2c"  Copyright 1989, 1990, 1991  Free Software Foundation, Inc.
- * 
+ *
  * Written and maintained by:   Dave Gillespie
  *                              256-80 Caltech
  *                              Pasadena CA 91125
@@ -23,8 +23,8 @@
 
 
 
-/* BEGIN */
-/* Run-time library for use with "p2c", the Pascal to C translator */
+/*BEGIN*/
+/*Run-time library for use with "p2c", the Pascal to C translator*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,9 +34,9 @@
 
 
 
-/* Check if at end of file, using Pascal "eof" semantics.  End-of-file for
+/*Check if at end of file, using Pascal "eof" semantics.  End-of-file for
    stdin is broken; remove the special case for it to be broken in a
-   different way. */
+   different way.*/
 
 int P_eof(FILE *f)
 {
@@ -45,7 +45,7 @@ int P_eof(FILE *f)
 	if (feof(f))
 		return 1;
 	if (f == stdin)
-		return 0;    /* not safe to look-ahead on the keyboard! */
+		return 0;    /*not safe to look-ahead on the keyboard!*/
 	ch = getc(f);
 	if (ch == EOF)
 		return 1;
@@ -54,8 +54,8 @@ int P_eof(FILE *f)
 }
 
 
-/* Store in "ret" the substring of length "len" starting from "pos" (1-based).
-   Store a shorter or null string if out-of-range.  Return "ret". */
+/*Store in "ret" the substring of length "len" starting from "pos" (1-based).
+   Store a shorter or null string if out-of-range.  Return "ret".*/
 
 char *strsub(register char *ret, register char *s, register int pos, register int len)
 {
@@ -82,8 +82,8 @@ char *strsub(register char *ret, register char *s, register int pos, register in
 }
 
 
-/* Return the index of the first occurrence of "pat" as a substring of "s",
-   starting at index "pos" (1-based).  Result is 1-based, 0 if not found. */
+/*Return the index of the first occurrence of "pat" as a substring of "s",
+   starting at index "pos" (1-based).  Result is 1-based, 0 if not found.*/
 
 int strpos2(char *s, register char *pat, register int pos)
 {
@@ -104,15 +104,15 @@ int strpos2(char *s, register char *pat, register int pos)
 	}
 	return 0;
 }
-/* Run-time library for use with "p2c", the Pascal to C translator */
-/* END */
+/*Run-time library for use with "p2c", the Pascal to C translator*/
+/*END*/
 
 
 
 
-// ###################################################################################
-// ###################################################################################
-// ###################################################################################
+/*###################################################################################
+   ###################################################################################
+   ###################################################################################*/
 
 
 
@@ -128,7 +128,42 @@ void fgets2(char *s, int n, FILE *stream)
 	TEMP = strchr(s, '\n');
 	if (TEMP != NULL)
 		*TEMP = 0;
-}  /*fgets2*/
+} /*fgets2*/
+
+
+
+
+/*
+ * Return the index of the in-line comment, which is specific
+ * to each one of the supported SPICE simulators
+ */
+int inlinestrpos(char *s)
+{
+	int k;
+
+	switch(spice) {
+		case 1: /*Eldo*/
+			k = strpos2(s, "!", 1);
+			break;
+		case 2: /*HSPICE*/
+			k = strpos2(s, "$", 1);
+			break;
+		case 3: /*LTspice*/
+			k = strpos2(s, ";", 1);
+			break;
+		case 4: /*Spectre*/
+			k = 0; /*Not defined at this momment*/
+			break;
+		case 100: /*ROSEN*/
+			k = 0;
+			break;
+		default:
+			printf("auxfunc.c - inlinestrpos -- Something unexpected has happened!\n");
+			exit(EXIT_FAILURE);
+		}
+
+	return k;
+} /*inlinestrpos*/
 
 
 
@@ -151,7 +186,7 @@ void ReadKey(char *Result, char *key, FILE *stream)
 		Result[0]='\0';
 	else
 		strcpy(Result, lkk1);
-}  /*ReadKey*/
+} /*ReadKey*/
 
 
 
@@ -163,7 +198,7 @@ void ReadKey(char *Result, char *key, FILE *stream)
  */
 char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, char end_char, int compliance)
 {
-	char line_local[LONGSTRINGSIZE]; //??further investigate the need of having a local copy
+	char line_local[LONGSTRINGSIZE]; /*??further investigate the need of having a local copy*/
 	int i;
 	/*,k*/
 	int j;
@@ -173,11 +208,15 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 	strcat(line_local, " ");
 
 	i = *start_from;
-	if (i>=strlen(line_local)) {  //immediatly exits if condition is met
+	if (i>=strlen(line_local)) { /*immediatly exits if condition is met*/
 		Result[0]='\0';
 		return Result;
 	}
-
+	if (i<1) {  /*Error most likely only happens due to wrong C code programming*/
+                    /*as in a 1-based string, the first value start at 1            */
+		printf("auxfunc.c - ReadSubKey -- start_from is zero: %s\n", line);
+		exit(EXIT_FAILURE);
+	}
 	while (line_local[i - 1] != begin_char && i < strlen(line_local))
 		i++;
 
@@ -190,45 +229,45 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 		j++;
 
 
-	//
-	//
+	/**/
+	/**/
 	switch(compliance) {
-		case 0: //no check
+		case 0: /*no check*/
 			break;
-		case 1: //begin character only
+		case 1: /*begin character only*/
 			if (line_local[i-1] != begin_char) {
 				printf("First not equal\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 2: //end character only
+		case 2: /*end character only*/
 			if (line_local[j-1] != end_char) {
 				printf("Last not equal\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 3: //(size must be != 0)
+		case 3: /*(size must be != 0)*/
 			if (i==(j-1)) {
-				printf("i==j\n");
+				printf("Size is zero\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 4: //begin + (!=0)
+		case 4: /*begin + (size must be !=0)*/
 			if (line_local[i-1] != begin_char) {
 				printf("First not equal\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
 			if (i==(j-1)) {
-				printf("i==j\n");
+				printf("Size is zero\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 5: //begin + end + (!=0)
+		case 5: /*begin + end + (size must be !=0)*/
 			if (line_local[i-1] != begin_char) {
 				printf("First not equal\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
@@ -240,7 +279,7 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 				exit(EXIT_FAILURE);
 			}
 			if (i==(j-1)) {
-				printf("i==j\n");
+				printf("Size is zero\n");
 				printf("auxfunc.c - ReadSubKey -- Incorrect line format: %s\n", line);
 				exit(EXIT_FAILURE);
 			}
@@ -251,12 +290,12 @@ char *ReadSubKey(char *Result, char *line, int *start_from, char begin_char, cha
 	}
 
 
-	//
-	//
+	/**/
+	/**/
 	*start_from = j;
 	strsub(data, line_local, (int)(i + 1), (int)(j - i - 1));
 	return strcpy(Result, data);
-}  /*ReadSubKey*/
+} /*ReadSubKey*/
 
 
 
@@ -278,7 +317,7 @@ void StripSpaces(char *data)
 		j--;
 
 	strcpy(data, strsub(STR1, data, (int)i, (int)(j - i + 1)));
-}  /*StripSpaces*/
+} /*StripSpaces*/
 
 
 
@@ -295,7 +334,7 @@ void Str2Lower(char *data)
 		if (data[i] >= 65 && data[i] <= 90)
 			data[i] += 32;
 	}
-}  /*Str2Lower*/
+} /*Str2Lower*/
 
 
 
@@ -312,7 +351,7 @@ void Str2Upper(char *data)
 		if (data[i] >= 97 && data[i] <= 122)
 			data[i] -= 32;
 	}
-}  /*Str2Upper*/
+} /*Str2Upper*/
 
 
 
@@ -334,21 +373,30 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 	endIndex = strlen(lstring);
 
 
-	if (strpos2(lstring, "*", 1) || strpos2(lstring, "/", 1))  //if we are reading
-		return 0;                                          //text just return
-	if (strpos2(lstring, "+", 2))                              //'0' and do not
-		if (!strpos2(lstring, "e+", 1))                    //loose time
-			return 0;                                  //
-	if (strpos2(lstring, "-", 2))                              //
-		if (!strpos2(lstring, "e-", 1))                    //
-			return 0;                                  //
+	if (strpos2(lstring, "*", 1) || strpos2(lstring, "/", 1))  /*if we are reading*/
+		return 0;                                          /*text just return */
+	if (strpos2(lstring, "+", 2))                              /*'0' and do not   */
+		if (!strpos2(lstring, "e+", 1))                    /*loose time       */
+			return 0;                                  /*                 */
+	if (strpos2(lstring, "-", 2))                              /*                 */
+		if (!strpos2(lstring, "e-", 1))                    /*                 */
+			return 0;                                  /*                 */
+	if ((lstring[0] < 48) || (lstring[0] > 57) )               /* '0'=48 ... '9'=57 */
+		if ((lstring[0] != 43) && (lstring[0] != 45) )     /* '+'=43     '-'=45 */
+			return 0;                                  /*                   */
+	if (strlen(lstring)>2)                                     /* '1u' is a valid number   */
+		if ((lstring[1] < 46) || (lstring[1] > 57) )       /*                          */
+			if (!strpos2(lstring, "meg", 2))           /* '1meg' is a valid number */
+				if (lstring[1] != 101)             /* '1e6' is a valid number  */
+					return 0;                  /*                          */
 
-	if (lstring[endIndex - 1] > '9' && endIndex != 0) {   /*finds number*/
-		//sprintf(STR1, "%.*s", (endIndex - 1), lstring);
-		//code = (sscanf(STR1, "%lg", &auxNumb) == 0);
+
+	if (lstring[endIndex - 1] > '9' && endIndex != 0) { /*finds number*/
+		/*sprintf(STR1, "%.*s", (endIndex - 1), lstring);*/
+		/*code = (sscanf(STR1, "%lg", &auxNumb) == 0);*/
 		code = (sscanf(lstring, "%lg", &auxNumb) == 0);
 
-		switch (lstring[endIndex - 1]) { //finds multiple: t,g,x,k, m,u,n,p,f,a,z
+		switch (lstring[endIndex - 1]) { /*finds multiple: t,g,x,k, m,u,n,p,f,a,z*/
 			case 't':   /*T: tera*/
 				auxNumb *= 1e+12;
 				break;
@@ -393,25 +441,25 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 				auxNumb *= 1e-21;
 				break;
 
-			default:   /*correct this to print lkk*/
-				//printf("Error: Variable not recognized: '%c' in '%s'\n", lstring[endIndex - 1], lstring);
+			default:    /*correct this to print lkk*/
+				/*printf("Error: Variable not recognized: '%c' in '%s'\n", lstring[endIndex - 1], lstring);*/
 				auxNumb *= 0;
 				break;
 		}
-	} else {//finds number
-		//sprintf(STR1, "%.*s", (int)endIndex, lstring);
-		//code = (sscanf(STR1, "%lg", &auxNumb) == 0);
+	} else {/*finds number*/
+		/*sprintf(STR1, "%.*s", (int)endIndex, lstring);*/
+		/*code = (sscanf(STR1, "%lg", &auxNumb) == 0);*/
 		code = (sscanf(lstring, "%lg", &auxNumb) == 0);
 	}
 
-	if (!strcmp(strsub(STR1, lstring, (endIndex - 2), 3), "meg")) {  //finds multiple: meg
+	if (!strcmp(strsub(STR1, lstring, (endIndex - 2), 3), "meg")) { /*finds multiple: meg*/
 		sprintf(STR1, "%.*s", (endIndex - 3), lstring);
 		code = (sscanf(STR1, "%lg", &auxNumb) == 0);
 		auxNumb *= 1e+6;
 	}
 
 	return auxNumb;
-}  /*asc2real*/
+} /*asc2real*/
 
 
 
@@ -445,5 +493,4 @@ int extended2engineer(double *num)
 		*num *= 1000;
 	}
 	return i;
-}  /*extended2engineer*/
-
+} /*extended2engineer*/

@@ -1,0 +1,12 @@
+# Info #
+Name:P_SUPPLY
+Symbol:ZP_SUPPLY
+Unit:W
+Analysis type:TRAN
+Definition:Power supply consumption
+Note:
+#
+
+# Commands #
+export real #SYMBOL#=rms(trim(sig=((I(VVDD:1)*V_SUPPLY)), from=TMEAS_START, to=TMEAS_STOP ))
+#

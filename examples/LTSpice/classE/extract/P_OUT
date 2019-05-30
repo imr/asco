@@ -13,7 +13,7 @@ Note:
 #
 
 # Post Processing #
-MEASURE_VAR:        fft: SEARCH_FOR:'Harmonic	Frequency	 Fourier': S_COL:01: P_LINE:2: P_COL:19:28
+MEASURE_VAR:        fft: SEARCH_FOR:'Harmonic	Frequency	 Fourier': S_COL:01: P_LINE:2: P_COL:20:28
 MEASURE_VAR:         rl: SEARCH_FOR:'rl: filt_res='
 MEASURE_VAR:   #SYMBOL#: MATH:&fft: ^: 2 : /: &rl: /:
 #

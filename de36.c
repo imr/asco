@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2005 Joao Ramos
+ * Your use of this code is subject to the terms and conditions of the
+ * GNU general public license version 2. See "COPYING" or
+ * http://www.gnu.org/licenses/gpl.html
+ *
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ *
+ */
+
+
+
+
 /***************************************************************
 **                                                            **
 **        D I F F E R E N T I A L     E V O L U T I O N       **
@@ -199,7 +212,7 @@ int DE(int argc, char *argv[])
 ***C*F*E*************************************************************/
 
 {
-   //char  chr;             /* y/n choice variable                */
+   /*char  chr;*/             /* y/n choice variable                */
    char  *strat[] =       /* strategy-indicator                 */
    {
             "",
@@ -233,7 +246,7 @@ int DE(int argc, char *argv[])
    double tmp[MAXDIM], best[MAXDIM], bestit[MAXDIM]; /* members  */
    double cost[MAXPOP];    /* obj. funct. values                 */
    double cvar;            /* computes the cost variance         */
-   double cvarmin; //stop criteria
+   double cvarmin; /*stop criteria*/
    double cmean;           /* mean cost                          */
    double F,CR;            /* control variables of DE            */
    double cmin;            /* help variables                     */
@@ -275,7 +288,7 @@ sprintf(laux, "%s%s", argv[2], ".cfg");
 
 
 
-fpin_ptr   = fopen(laux,"r"); //fpin_ptr   = fopen(argv[1],"r");
+fpin_ptr   = fopen(laux,"r"); /*fpin_ptr   = fopen(argv[1],"r");*/
 
  if (fpin_ptr == NULL)
  {
@@ -283,7 +296,7 @@ fpin_ptr   = fopen(laux,"r"); //fpin_ptr   = fopen(argv[1],"r");
     exit(1);
  }
 
-ReadKey(lkk, "#DE#", fpin_ptr); // .cfg file
+ReadKey(lkk, "#DE#", fpin_ptr); /* .cfg file*/
 if (strcmp(lkk, "#DE#"))
 {
 	printf("\nde36.c - Cannot find #DE# category in %s.cfg\n", argv[2]);
@@ -291,56 +304,56 @@ if (strcmp(lkk, "#DE#"))
 }
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 strategy=asc2real(laux, 1, (int)strlen(laux));   /*---choice of strategy-----------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 genmax=asc2real(laux, 1, (int)strlen(laux));     /*---maximum number of generations------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 refresh=asc2real(laux, 1, (int)strlen(laux));    /*---output refresh cycle---------------*/
 
-//fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-//ii=0; ReadSubKey(laux, lkk, &ii, ':', ':');
-//D=asc2real(laux, 1, (int)strlen(laux));          /*---number of parameters---------------*/
+/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
+/*ii=1; ReadSubKey(laux, lkk, &ii, ':', ':');*/
+/*D=asc2real(laux, 1, (int)strlen(laux));*/          /*---number of parameters---------------*/
 D=0;
 while (parameters[D].name[0]  != '\0')
 	D++;                                     /*---number of parameters---------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 NP=asc2real(laux, 1, (int)strlen(laux));         /*---population size.-------------------*/
 
-//fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
 inibound_h=+10;                                  /*---upper parameter bound for init-----*/
 
-//fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
 inibound_l=-10;                                  /*---lower parameter bound for init-----*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 F=asc2real(laux, 1, (int)strlen(laux));          /*---weight factor----------------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 CR=asc2real(laux, 1, (int)strlen(laux));         /*---crossing over factor---------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 seed=asc2real(laux, 1, (int)strlen(laux));       /*---random seed------------------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 cvarmin=asc2real(laux, 1, (int)strlen(laux));    /*---minimum cost variance--------------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 Wobj=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to the objectives -------*/
 
 fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=0; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
 Wcon=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to the constraints -------*/
 
 fclose(fpin_ptr);
@@ -466,7 +479,7 @@ fclose(fpin_ptr);
 /*=======================================================================*/
 
    gen = 0;                          /* generation counter reset */
-   cvar = 1.7976931348623157e+308; //DBL_MAX from <float.h>
+   cvar = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/
    while ((gen <= genmax) && (cvar > cvarmin)/*&& (kbhit() == 0)*/) /* remove comments if conio.h */
    {                                                               /* is accepted by compiler    */
       gen++;
@@ -586,7 +599,7 @@ fclose(fpin_ptr);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
 	   L = 0;
 	   do
-	   {                           
+	   {
 	     tmp[n] = (*pold)[r5][n] + 
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     n = (n+1)%D;
@@ -647,7 +660,7 @@ fclose(fpin_ptr);
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
 	     {                       
-	       tmp[n] = bestit[n] + 
+	       tmp[n] = bestit[n] +
 		      ((*pold)[r1][n]+(*pold)[r2][n]-(*pold)[r3][n]-(*pold)[r4][n])*F;
 	     }
 	     n = (n+1)%D;
@@ -741,7 +754,7 @@ fclose(fpin_ptr);
 /*-------Final output in file-------------------------------------------*/
 
 
-   trial_cost = evaluate(D,best,&nfeval,argv[2]);  //call optimization with the best vector before leaving
+   trial_cost = evaluate(D,best,&nfeval,argv[2]);  /*call optimization with the best vector before leaving*/
 
    fprintf(fpout_ptr,"\n\n\n Best-so-far obj. funct. value = %-15.10g\n",cmin);
 

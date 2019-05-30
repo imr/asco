@@ -1,0 +1,72 @@
+//Three stage operational amplifier
+
+*** *** OPAMP SUBCIRCUIT *** ***
+subckt pfc\.sub ( vp vn VOUT ibias vb1 avdd avss )
+
+m00 ( ibias ibias avdd avdd ) pmos w=#WM00_10# l=#LM1#
+
+* differential pair
+m10 ( 1 ibias avdd avdd ) pmos w=#WM00_10# l=#LM1# m=6
+
+m11 ( 2 vn 1 1 ) pmos w=#WM11_12# l=#LM2#
+m12 ( 3 vp 1 1 ) pmos w=#WM11_12# l=#LM2#
+
+* folded cascode
+m13 ( 4 ibias avdd avdd ) pmos w=#WM13_16# l=#LM1# m=3
+m16 ( 5 ibias avdd avdd ) pmos w=#WM13_16# l=#LM1# m=3
+
+m14 ( 4 vb1 2 avss ) nmos w=#WM14_17# l=#LM3#
+m17 ( 5 vb1 3 avss ) nmos w=#WM14_17# l=#LM3#
+
+m15 ( 2 4 avss avss ) nmos w=#WM15_18# l=#LM4#
+m18 ( 3 4 avss avss ) nmos w=#WM15_18# l=#LM4#
+
+* second stage
+m20 ( 6     5 avdd avdd ) pmos w=#WM20# l=#LM6#
+m22 ( 7 ibias avdd avdd ) pmos w=#WM22# l=#LM1#
+
+m21 ( 6 6 avss avss ) nmos w=#WM21_23# l=#LM5#
+m23 ( 7 6 avss avss ) nmos w=#WM21_23# l=#LM5#
+
+* third stage
+m30 ( VOUT 5 avdd avdd ) pmos w=#WM30# l=#LM6# m=22
+m31 ( VOUT 7 avss avss ) nmos w=#WM31# l=#LM7# m=5
+
+* compensation
+Cm1 ( 5 VOUT ) capacitor c=#CC1#
+Cm2 ( 5    7 ) capacitor c=#CC2#
+ends pfc\.sub
+
+*** *** SUPPLY VOLTAGES *** ***
+VDD ( avdd 0 ) vsource dc=#VSUPPLY#
+vss ( avss 0 ) vsource dc=0
+
+*** *** BIAS VOLTAGE *** ***
+vvb1 ( vb1 avss ) vsource dc=#VBIAS#
+
+*** *** BIAS CURRENT *** ***
+iibias ( ibias avss ) isource dc=#IBIAS#
+
+*** *** SUB-CIRCUIT *** ***
+xopamp ( vp vn VOUT ibias vb1 avdd avss ) pfc\.sub
+
+*** *** LOAD *** ***
+rl ( VOUT vx ) resistor r=#RLOAD#
+cl ( VOUT vx ) capacitor c=#CLOAD#
+vy ( vx avss ) vsource dc=#VSUPPLY# / 2
+
+*** *** AC LOOP *** ***
+vin ( vp avss ) vsource dc=#VSUPPLY# / 2 mag=1
+rx (vn VOUT) switch position=1 ac_position=0
+cx ( vn avss ) capacitor c=10
+
+*** *** ANALYSIS *** ***
+analysisAC1 ac dec=100 start=0.001 stop=1e9 save=selected oppoint=none
+//.pz v(VOUT) vin
+save VOUT
+
+//analysisOP1 dc oppoint=logfile
+sppSaveOptions options save=allpub
+include "p.typ"
+include "n.typ"
+// End of Netlist

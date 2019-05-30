@@ -1,10 +1,11 @@
 /*
- *  Copyright (C) 1999-2005 Joao Ramos
+ * Copyright (C) 1999-2005 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  */
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +37,7 @@ void ReadParameter(char *line, char *line_smallcaps, char *s, char *data_string,
 		ReadSubKey(laux, line, &j, '=', ' ', 0);
 		StripSpaces(laux);
 
-		if (laux[strlen(laux)-1]=='\'') {  //removes '' if they exist
+		if (laux[strlen(laux)-1]=='\'') { /*removes '' if they exist*/
 			strsub(data_string, laux, 2, strlen(laux)-2);
 			strcpy(laux, data_string);
 		}
@@ -47,7 +48,7 @@ void ReadParameter(char *line, char *line_smallcaps, char *s, char *data_string,
 		strcpy(data_string, laux);
 	}
 	*jj=j;
-}
+} /*ReadParameter*/
 
 
 
@@ -63,7 +64,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 	char element[5];
 	int small;
 
-	(*ptr)++;	/*this variable should not be named 'ptr', but instead something like 'index' or 'element_number'*/
+	(*ptr)++; /*this variable should not be named 'ptr', but instead something like 'index' or 'element_number'*/
 	small = FALSE;
 
 	ReadParameter(lkk, laux, "l=", l_string, &l_value, &j);
@@ -72,7 +73,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 		printf("small_1_=%s\n", laux);
 	}
 
-	j = strpos2(laux, "nmos", 1);   /*searches for 'nmos' in the input line*/
+	j = strpos2(laux, "nmos", 1); /*searches for 'nmos' in the input line*/
 	strsub(element, laux, (int)j, 4);
 	if (!strcmp(element, "nmos")) {
 		if (!small) {
@@ -83,7 +84,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 			Abeta = mosfet.s_nmos_abeta;
 		}
 	} else {
-		j = strpos2(laux, "pmos", 1);   /*searches for 'pmos' in the input line*/
+		j = strpos2(laux, "pmos", 1); /*searches for 'pmos' in the input line*/
 		strsub(element, laux, (int)j, 4);
 		if (!strcmp(element, "pmos")) {
 			if (!small) {
@@ -101,12 +102,12 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 
 
 	ReadParameter(lkk, laux, "m=", m_string, &m_value, &j);
-	if (j==0) {               //m was not found
+	if (j==0) {               /*m was not found*/
 		m_value = 1.0;
 		strcpy(m_string, "1");
 	}
 	else {
-		if (m_value!=0) { //m was found and is not text
+		if (m_value!=0) { /*m was found and is not text*/
 			m_value = m_value/1e6;
 			sprintf(m_string, "%0.2f", m_value);
 		}
@@ -123,21 +124,28 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 		/*writes the Monte Carlo parameters*/
 
 		switch(spice) {
-			case 1: //Eldo
+			case 1: /*Eldo*/
 				fprintf(fout, ".param w%d=AGAUSS(%s, %s*1e-6, 1) ", *ptr, w_string, DeltaBeta);
 				fprintf(fout, " vto%d=AGAUSS(0, %s*1e-9, 1)\n", *ptr, DeltaVt);
 				break;
-			case 2: //HSPICE
+			case 2: /*HSPICE*/
 				fprintf(fout, ".param w%d=AGAUSS(%s, '%s*1e-6', 1) ", *ptr, w_string, DeltaBeta);
 				fprintf(fout, " vto%d=AGAUSS(0, '%s*1e-9', 1)\n", *ptr, DeltaVt);
 				break;
-			//case 3: //LTspice
-			//	break;
-			//case 100: //ROSEN
-			//	k
-			//	break;
+			case 3: /*LTspice*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for LTSpice\n");
+				exit(EXIT_FAILURE);
+				break;
+			case 4: /*Spectre*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Spectre\n");
+				exit(EXIT_FAILURE);
+				break;
+			case 100: /*ROSEN*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Rosen\n");
+				exit(EXIT_FAILURE);
+				break;
 			default:
-				printf("auxfunc_monte.c - MCrlc -- Something unexpected has happened!\n");
+				printf("auxfunc_monte.c - MCmosfet -- Something unexpected has happened!\n");
 				exit(EXIT_FAILURE);
 		}
 	} else {
@@ -150,18 +158,18 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 
 	/*writes the line with Monte Carlo parameters*/
 	ReadParameter(lkk, laux, "w=", w_string, &w_value, &k);
-	if (k<j) { //'w=' appears before 'l='
+	if (k<j) { /*'w=' appears before 'l='*/
 		k = strpos2(laux, "w=", 1);   /*searches for 'w=' in the input line*/
 		fprintf(fout, "%.*s=w%d", k, lkk, *ptr);
 		k = strpos2(laux, " l=", 1);  /*searches for ' l=' in the input line*/
 		fprintf(fout, "%s delvto=vto%d%s\n", strsub(l_string, lkk, k, (j - k + 1)), *ptr, lkk + j);
-	} else { //'w=' appears after 'l='
+	} else { /*'w=' appears after 'l='*/
 		k = strpos2(laux, "w=", 1);   /*searches for 'w=' in the input line*/
 		fprintf(fout, "%.*s=w%d", k, lkk, *ptr);
 		k = strpos2(laux, " ", k);
 		fprintf(fout, " delvto=vto%d%s\n", *ptr, lkk + k - 1);
 	}
-}  /*MCmosfet*/
+} /*MCmosfet*/
 
 
 
@@ -188,28 +196,12 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 	while (lkk[j - 1] != ' ')
 		j--;
 
-	k = 0;
+	k = 1;
 	/*the following lines will read the Res/Ind/Cap value*/
 	ReadSubKey(lkk1, lkk, &k, '\'', '\'', 0);
-	if (*lkk1 == '\0') {   /*resistor/capacitor doesn't include ''. Ex:'10k' */
+	if (*lkk1 == '\0') {   /*resistor/capacitor doesn't include ''. Ex:'10k'*/
 		/*This skips the characters after inline comment*/
-		switch(spice) {
-			case 1: //Eldo
-				k = strpos2(lkk, "!", 1);
-				break;
-			case 2: //HSPICE
-				k = strpos2(lkk, "$", 1);
-				break;
-			case 3: //LTspice
-				k = strpos2(lkk, ";", 1);
-				break;
-			//case 100: //ROSEN
-			//	k
-			//	break;
-			default:
-				printf("auxfunc_monte.c - MCrlc -- Something unexpected has happened!\n");
-				exit(EXIT_FAILURE);
-		}
+		k=inlinestrpos(lkk);
 		if (k) {
 			k--;
 			while (lkk[k - 1] == ' ')
@@ -227,25 +219,25 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 
 	delta_abs = delta / 100;
 
-	value = asc2real(lkk1, 1, strlen(lkk1)); //not used anymore but can be used to print
-						 //'delta' instead of 'ComponenteValue*Variation'
+	value = asc2real(lkk1, 1, strlen(lkk1)); /*not used anymore but can be used to print*/
+						 /*'delta' instead of 'ComponenteValue*Variation'*/
 	if (value==0) {
 		fprintf(fout, ".param %c%d=AGAUSS(%s, %s*%f, 1)\n", device, *ptr, lkk1, lkk1, delta_abs);
 
 	} else {
 		delta_abs = delta_abs * value;
-  		//k = extended2engineer(&delta_abs);
+  		/*k = extended2engineer(&delta_abs);*/
 		fprintf(fout, ".param %c%d=AGAUSS(%s, %0.2fe%d, 1)\n",      device, *ptr, lkk1, delta_abs, extended2engineer(&delta_abs));
 	}
-	strsub(lkk1, lkk, k+2, strlen(lkk)); //the remaing part of the input line
+	strsub(lkk1, lkk, k+2, strlen(lkk)); /*the remaing part of the input line*/
 	fprintf(fout, "%.*s%c%d%s\n", j, lkk, device, *ptr, lkk1);
-}  /*MCdeviceRC*/
+} /*MCrlc*/
 
 
 
 
 /*
- * MonteCarlo - fills *.mc file with MonteCarlo parameters: *.sp->*.mc
+ * MonteCarlo - fills *.mc file with MonteCarlo parameters: <inputfile>.* -> <inputfile>.mc
  */
 void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 {
@@ -258,8 +250,8 @@ void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 	char STR2[LONGSTRINGSIZE], laux[LONGSTRINGSIZE];
 
 
-	//
-	//
+	/**/
+	/**/
 	if ((fsweepINI=fopen(ConfigFile,"rt")) == 0) {
 		printf("auxfunc_corner.c - Cannot open config file: %s\n", ConfigFile);
 		exit(EXIT_FAILURE);
@@ -274,8 +266,8 @@ void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 	}
 
 
-	//
-	//
+	/**/
+	/**/
 	ReadKey(lkk, "#Monte Carlo#", fsweepINI);
 	if (!lkk[0]) {
 		printf("auxfunc_monte.c - #Monte Carlo# key not found\n");
@@ -339,16 +331,15 @@ void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 		c_delta /= sqrt(2.0);
 
 
-		//
-		//
-		fgets2(lkk, LONGSTRINGSIZE, fin);       //read title
-		fprintf(fout, "%s\n", lkk);  //write title
+		/**/
+		/**/
+		fgets2(lkk, LONGSTRINGSIZE, fin); /*read title*/
+		fprintf(fout, "%s\n", lkk); /*write title*/
 		ptr = 0;
 		while (!P_eof(fin)) {
-			//lkk[0] = ' ';  //avoids the error of having read before m,r,c and now having an empty line, maybe only in PASCAL
 			fgets2(lkk, LONGSTRINGSIZE, fin);
-			strcpy(laux, lkk); //lkk maintains character case
-			Str2Lower(laux);   //laux constains only lower caps
+			strcpy(laux, lkk); /*lkk maintains character case*/
+			Str2Lower(laux);   /*laux constains only lower caps*/
 			switch (laux[0]) {
 				case 'm':   /*MonteCarlo for MOSFET transistors*/
 					MCmosfet(mosfet, lkk, laux, &ptr, fout);
@@ -380,4 +371,4 @@ void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 		fclose(fin);
 	if (fout != NULL)
 		fclose(fout);
-}  /*MonteCarlo*/
+} /*MonteCarlo*/
