@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
@@ -97,9 +97,6 @@
 
 /*------------------------Globals---------------------------------------*/
 
-long  rnd_uni_init;                 /* serves as a seed for rnd_uni()   */
-double c[MAXPOP][MAXDIM], d[MAXPOP][MAXDIM];
-double (*pold)[MAXPOP][MAXDIM], (*pnew)[MAXPOP][MAXDIM], (*pswap)[MAXPOP][MAXDIM];
 
 
 
@@ -261,6 +258,10 @@ int DE(int argc, char *argv[])
    double F,CR;            /* control variables of DE            */
    double cmin;            /* help variables                     */
 
+   long  rnd_uni_init;                 /* serves as a seed for rnd_uni()   */
+   double c[MAXPOP][MAXDIM], d[MAXPOP][MAXDIM];
+   double (*pold)[MAXPOP][MAXDIM], (*pnew)[MAXPOP][MAXDIM], (*pswap)[MAXPOP][MAXDIM];
+
    FILE  *fpin_ptr;
    FILE  *fpout_ptr;
 
@@ -268,13 +269,8 @@ int DE(int argc, char *argv[])
    int ii;
 
 /*------Initializations----------------------------*/
-	#ifdef MPI
-	signal(SIGINT, SIG_DFL);   /* Ctrl-C detection*/
-	signal(SIGQUIT, quitproc); /* Ctrl-\ detection*/
-	#else
 	signal(SIGINT, sigproc);   /* Ctrl-C detection*/
 	signal(SIGQUIT, quitproc); /* Ctrl-\ detection*/
-	#endif
 
 /*mpi: MPI initialization*/
 	#ifdef MPI
@@ -567,12 +563,12 @@ fclose(fpin_ptr);
    for (i=0; i<NP; i++) /*mpi: */
    {
 	nfeval++;
-	if (NP)
+	if (NP) /*Ctrl-C detection*/
 		cost[i] = evaluate(D,c[i],argv[2]); /* obj. funct. value */
 	if (cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
-		/* printf("INFO:  de36.c - Initialization.\n", NP); */
+		/* printf("INFO:  de36.c - Cost is zero during Initialization); */
 		sleep(1);
 		/* printf("waking-up...\n"); */
 	}
@@ -595,6 +591,14 @@ fclose(fpin_ptr);
 					err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
 					source_id = (status.MPI_SOURCE); /* Get id of sender */
 					cost[source_id+m*i-1]=cost_mpi;
+					if (MPI_EXXIT) {
+						NP=0;
+						genmax=0;
+						/* printf("INFO:  de36.c - Ctrl-C has been pressed during Initialization\n"); */
+						/* fflush(stdout); */
+						sleep(1);
+						/* printf("waking-up...\n"); */
+					}
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 				}
 			}
@@ -619,6 +623,14 @@ fclose(fpin_ptr);
 			/* j holds the correct start index for trial_cost */
 			for (k=0; k<NP; k++) {
 				cost[j+k]=trial_cost_y[k];
+				if (MPI_EXXIT) {
+					NP=0;
+					genmax=0;
+					/* printf("INFO:  de36.c - Ctrl-C has been pressed during Initialization\n"); */
+					/* fflush(stdout); */
+					sleep(1);
+					/* printf("waking-up...\n"); */
+				}
 			}
 		}
 	}
@@ -734,7 +746,7 @@ fclose(fpin_ptr);
 	 else if (strategy == 3) /* similiar to DE2 but generally better */
 	 { 
 	   assignd(D,tmp[i],(*pold)[i]);
-	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
+	   n = (int)(rnd_uni(&rnd_uni_init)*D);
 	   L = 0;
 	   do
 	   {
@@ -796,7 +808,7 @@ fclose(fpin_ptr);
            for (L=0; L<D; L++) /* perform D binomial trials */
            {
 	     if ((rnd_uni(&rnd_uni_init) < CR) || L == (D-1)) /* change at least one parameter */
-	     {                       
+	     {
 	       tmp[i][n] = (*pold)[r1][n] + F*((*pold)[r2][n]-(*pold)[r3][n]);
 	     }
 	     n = (n+1)%D;
@@ -856,10 +868,10 @@ fclose(fpin_ptr);
 	nfeval++;
 	if (NP) /*Ctrl-C detection*/
 		trial_cost[i] = evaluate(D,tmp[i],argv[2]);  /* Evaluate new vector in tmp[] */
-	if (trial_cost[i]==0) { /*cost is zero ONLY if ctrl-c has been pressed during call to simulator*/
+	if (trial_cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
-		/* printf("INFO:  de36.c - Mutation.\n", NP); */
+		/* printf("INFO:  de36.c - Cost is zero"); */
 		sleep(1);
 		/* printf("waking-up...\n"); */
 	}
@@ -882,6 +894,14 @@ fclose(fpin_ptr);
 					err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
 					source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
 					trial_cost[source_id-1]=cost_mpi;
+					if (MPI_EXXIT) {
+						NP=0;
+						genmax=0;
+						/* printf("INFO:  de36.c - Ctrl-C has been pressed during Mutation\n"); */
+						/* fflush(stdout); */
+						sleep(1);
+						/* printf("waking-up...\n"); */
+					}
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 				}
 			}
@@ -906,6 +926,14 @@ fclose(fpin_ptr);
 			/* j holds the correct start index for trial_cost */
 			for (k=0; k<NP; k++) {
 				trial_cost[j+k]=trial_cost_y[k];
+				if (MPI_EXXIT) {
+					NP=0;
+					genmax=0;
+					/* printf("INFO:  de36.c - Ctrl-C has been pressed during Mutation\n"); */
+					/* sleep(1); */
+					/* printf("waking-up...\n"); */
+				}
+
 			}
 		}
 	}
@@ -920,7 +948,7 @@ fclose(fpin_ptr);
 	    {                               /* if so...*/
 	       cmin=trial_cost[i];           /* reset cmin to new low...*/
 	       imin=i;
-	       assignd(D,best,tmp[i]);           
+	       assignd(D,best,tmp[i]);
 	    }                           
 	 }                            
 	 else
@@ -1027,8 +1055,8 @@ fclose(fpin_ptr);
 		}
 	}
 	if (MPI_METHOD==2) {
-		for (i=0; i<NP; i++) {
-			for (j=0; j<D; j++) {
+		for (i=0; i<MAXPOP; i++) {
+			for (j=0; j<MAXDIM; j++) {
 				tmp[i][j] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
 			}
 		}
@@ -1051,15 +1079,13 @@ void sigproc(int sig)
 	after each call. So for portability reset signal each time */
 
 	#ifdef MPI
-	const int tag = 42;	        /* Message tag */
-	const int root = 0;     /* Root process in broadcast */
-	int i, j, m, D;
-	double tmp[1][1];
-	int id, ntasks, source_id, dest_id, err;
-	err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
-	printf("you have pressed ctrl-c  PID=%d\n",id);
-	MPI_Finalize();
-	/* return(EXIT_SUCCESS); */
+	int id, err;
+	if (MPI_EXXIT==0) {
+		err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
+		printf("INFO:  de36.c - sigproc -- Ctrl-C has been pressed. Be patient while all running simulations end. Exiting...  PID=%d\n",id);
+		sleep(1);
+		MPI_EXXIT=1;
+	}
 	#else
 	/* printf("you have pressed ctrl-c\n"); */
 	sleep(1);

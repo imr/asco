@@ -1,0 +1,27 @@
+<Qucs Schematic 0.0.8>
+<Properties>
+  <View=0,0,610,417,1,0,0>
+  <Grid=10,10,0>
+  <DataSet=amplifier.dat>
+  <DataDisplay=amplifier.sch>
+  <OpenDisplay=1>
+</Properties>
+<Symbol>
+</Symbol>
+<Components>
+</Components>
+<Wires>
+</Wires>
+<Diagrams>
+  <Tab 120 417 297 52 3 #c0c0c0 1 00 1 0 1 1 1 0 1 1 1 0 1 1 315 0 225 "" "" "">
+	<"UnityGainFreq" #0000ff 0 6 0 0 0>
+	<"PhaseMargin" #0000ff 0 6 0 0 0>
+  </Tab>
+  <Rect 120 293 391 223 3 #c0c0c0 1 11 1 1e+06 1 1e+11 1 0.3 1 30 1 -100 20 8.64462 315 0 225 "" "" "">
+	<"Gain" #0000ff 2 3 0 0 0>
+	  <Mkr 7.9341e+10 59 -139 6 0 0>
+	<"Phase" #ff0000 2 3 0 0 1>
+  </Rect>
+</Diagrams>
+<Paintings>
+</Paintings>

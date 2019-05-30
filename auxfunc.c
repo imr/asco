@@ -159,6 +159,9 @@ int inlinestrpos(char *s)
 		case 4: /*Spectre*/
 			k = strpos2(s, "//", 1);
 			break;
+		case 50: /*Qucs*/
+			k = 0;
+			break;
 		case 100: /*general*/
 			k = 0;
 			break;

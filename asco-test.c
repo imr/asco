@@ -4,12 +4,15 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
 #include <string.h>
 #include <unistd.h>
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
 
 
 #include "de.h"
@@ -57,13 +60,21 @@ int main(int argc, char *argv[])
 		printf("          asco-test -hspice  <inputfile>.sp\n");
 		printf("          asco-test -ltspice <inputfile>.net\n");
 		printf("          asco-test -spectre <inputfile>.scs\n");
+		printf("          asco-test -qucs    <inputfile>.txt\n");
+		printf("          asco-test -general <inputfile>.*\n");
 		printf("\nDefault file extension is assumed if not specified\n\n\n");
 		exit(EXIT_FAILURE);
 	}
 
 
 	/**/
-	/*Step3: Initialization of all variables and strucutres*/
+	/*Step3: Initialization of all variables and structures*/
+	#ifdef __MINGW32__
+	{
+		WSADATA WSAData;
+		WSAStartup (0x0202, &WSAData);
+	}
+	#endif
 	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
 		printf("asco-test.c -- gethostname failed, ccode = %d\n", ccode);
 		exit(EXIT_FAILURE);
@@ -94,7 +105,7 @@ int main(int argc, char *argv[])
 		case 'l': /*LTspice*/
 			if (!strcmp(argv[1], "ltspice")) {
 				spice=3;
-				printf("INFO:  LTSpice initialization on '%s'\n", hostname);
+				printf("INFO:  LTspice initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;
@@ -102,6 +113,13 @@ int main(int argc, char *argv[])
 			if (!strcmp(argv[1], "spectre")) {
 				spice=4;
 				printf("INFO:  Spectre initialization on '%s'\n", hostname);
+				fflush(stdout);
+			}
+			break;
+		case 'q': /*Qucs*/
+			if (!strcmp(argv[1], "qucs")) {
+				spice=50;
+				printf("INFO:  Qucs initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;

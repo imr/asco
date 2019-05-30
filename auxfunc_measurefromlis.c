@@ -79,6 +79,9 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
 		case 4: /*Spectre*/
 			return 0;
 			break;
+		case 50: /*Qucs*/
+			return 0;
+			break;
 		case 100: /*general*/
 			return 0;
 			break;
@@ -137,10 +140,13 @@ int DetectsTransistorColumns(char *lelement, int index[])
 			index[j] = i + 1;                     /*corrects size for last column*/
 			break;
 		case 3: /*LTspice*/
-			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- LTSpice not supported\n");
+			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- LTspice not supported\n");
 			exit(EXIT_FAILURE);
 		case 4: /*Spectre*/
 			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- Spectre not supported\n");
+			exit(EXIT_FAILURE);
+		case 50: /*Qucs*/
+			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- GENERAL not supported\n");
@@ -607,10 +613,13 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 			 */
 			break;
 		case 3: /*LTspice*/
-			printf("auxfunc_measurefromlis.c - CMOSText2Line -- LTSpice not supported\n");
+			printf("auxfunc_measurefromlis.c - CMOSText2Line -- LTspice not supported\n");
 			exit(EXIT_FAILURE);
 		case 4: /*Spectre*/
 			printf("auxfunc_measurefromlis.c - CMOSText2Line -- Spectre not supported\n");
+			exit(EXIT_FAILURE);
+		case 50: /*Qucs*/
+			printf("auxfunc_measurefromlis.c - CMOSText2Line -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - CMOSText2Line -- GENERAL not supported\n");
@@ -864,10 +873,13 @@ char *CMOSLine2Text(char *Result, int measure_line, char *OutputFile)
 			}
 			break;
 		case 3: /*LTspice*/
-			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- LTSpice not supported\n");
+			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- LTspice not supported\n");
 			exit(EXIT_FAILURE);
 		case 4: /*Spectre*/
 			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- Spectre not supported\n");
+			exit(EXIT_FAILURE);
+		case 50: /*Qucs*/
+			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- GENERAL not supported\n");

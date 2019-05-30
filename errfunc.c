@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
  
@@ -18,7 +18,11 @@
 #include <strings.h>
 #include <unistd.h>
 #include <signal.h>
+#ifndef __MINGW32__
 #include <sys/wait.h>
+#else
+#include <winsock2.h>
+#endif
 
 
 #include "auxfunc.h"
@@ -208,10 +212,13 @@ void LogtoFile(double cost)
 		case 2: /*HSPICE*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			sprintf(laux, "%s.log.log", hostname);  /*hostname is "longmorn"*/
 			break;
 		case 4: /*Spectre*/
+			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
+			break;
+		case 50: /*Qucs*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
 		case 100: /*general*/
@@ -289,9 +296,9 @@ void WriteToMem(int num_measures)
 					break;
 				case 2: /*HSPICE*/
 					break;
-				case 3: /*LTSpice*/
+				case 3: /*LTspice*/
 					/*Str2Lower(laux);*/
-					ii=strpos2(measure[i].data, "=", 1);                         /* LTSpice measurement format is different than Eldo and HSPICE  */
+					ii=strpos2(measure[i].data, "=", 1);                         /* LTspice measurement format is different than Eldo and HSPICE  */
 					if (ii) {                                                    /* so specific code is added in here to cope with the difference */
 						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
 						strcpy(measure[i].data, laux);                       /*                                                               */
@@ -308,6 +315,8 @@ void WriteToMem(int num_measures)
 					}
 					break;
 				case 4: /*Spectre*/
+					break;
+				case 50: /*Qucs*/
 					break;
 				case 100: /*general*/
 					break;
@@ -442,11 +451,14 @@ double errfunc(char *filename, double *x)
 		case 2: /*HSPICE*/
 			sprintf(lkk, "%s%s", hostname, ".sp");
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			sprintf(lkk, "%s%s", hostname, ".net");
 			break;
 		case 4: /*Spectre*/
 			sprintf(lkk, "%s%s", hostname, ".scs");
+			break;
+		case 50: /*Qucs*/
+			sprintf(lkk, "%s%s", hostname, ".txt");
 			break;
 		case 100: /*general*/
 			sprintf(lkk, "%s%s", hostname, ".txt");
@@ -501,11 +513,14 @@ double errfunc(char *filename, double *x)
 		case 2: /*HSPICE*/
 			sprintf(lkk, "nice -n 19 hspice -i %s.sp -o %s.lis > /dev/null", hostname, hostname);
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			sprintf(lkk, "nice -n 19 ltspice -b %s.net > /dev/null", hostname);
 			break;
 		case 4: /*Spectre*/
 			sprintf(lkk, "nice -n 19 spectremdl -batch %s.mdl -design %s.scs > /dev/null", hostname, hostname);
+			break;
+		case 50: /*Qucs*/
+			sprintf(lkk, "nice -n 19 qucsator -i %s.txt -o %s.dat > /dev/null", hostname, hostname);
 			break;
 		case 100: /*general*/
 			sprintf(lkk, "nice -n 19 ./general.sh %s %s", hostname, hostname);
@@ -515,14 +530,17 @@ double errfunc(char *filename, double *x)
 			exit(EXIT_FAILURE);
 	}
 	ii=system(lkk);
+	#ifndef __MINGW32__
 	if (WIFSIGNALED(ii) && (WTERMSIG(ii) == SIGINT || WTERMSIG(ii) == SIGQUIT)) {
 		printf("errfunc.c - Step3 -- Ctrl-C key pressed. Exiting optimization loop.\n");
+		fflush(stdout);
 		#ifdef MPI
-		exit(EXIT_FAILURE);
+		/* exit(EXIT_FAILURE); */
 		#else
 		return(0); /*returned simulation cost is zero; Ctrl-C detection*/
 		#endif
 	}
+	#endif
 
 
 	/**/
@@ -537,11 +555,14 @@ double errfunc(char *filename, double *x)
 		case 2: /*HSPICE*/
 			sprintf(lkk, "%s.lis", hostname);
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			sprintf(lkk, "%s.log", hostname);
 			break;
 		case 4: /*Spectre*/
 			sprintf(lkk, "%s.measure", hostname);
+			break;
+		case 50: /*Qucs*/
+			sprintf(lkk, "%s.dat", hostname);
 			break;
 		case 100: /*general*/
 			sprintf(lkk, "%s.out", hostname);

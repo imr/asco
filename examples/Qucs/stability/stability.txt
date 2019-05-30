@@ -1,0 +1,34 @@
+# Qucs 0.0.9  /home/stefan/.qucs/Optimizer_prj/Stability.sch
+
+.Def:LowNoiseFET _net0 _net3 _net9
+   L:L1 _net0 _net1 L="6 pH"
+   L:L2 _net2 _net3 L="16.7 pH"
+   C:C1 _net4 _net2 C="0.031 pF"
+   C:C2 _net5 _net6 C="234 fF"
+   C:C3 _net4 _net1 C="5 fF"
+   C:C4 _net7 _net8 C="0.014 pF"
+   L:L3 _net9 _net4 L="6.4 pH"
+   VCCS:SRC1 _net6 _net8 _net7 _net5 G="0.069 S" T="1.69 ps"
+   R:R1 _net1 _net6 R="0.9 Ohm" Temp="16.85"
+   R:R2 _net7 _net5 R="1.9 Ohm" Temp="16.85"
+   R:R3 _net4 _net7 R="2.4 Ohm" Temp="16.85"
+   R:R4 _net10 _net8 R="3.6 Ohm" Temp="16.85"
+   R:R5 _net7 _net8 R="312 Ohm" Temp="1727"
+   R:R6 _net8 _net2 R="2.5 Ohm" Temp="16.85"
+   C:C5 _net6 _net10 C="0.039 pF"
+.Def:End
+
+
+L:L1 gnd _net2 L="#L1#"
+R:R1 _net3 _net0 R="#R1#" Temp="16.85"
+Sub:FET1 _net3 _net1 _net2 Type="LowNoiseFET"
+Pac:P2 _net1 gnd Num="2" Z="50 Ohm" P="0 dBm" f="1 GHz" Temp="26.85"
+Pac:P1 _net3 gnd Num="1" Z="50 Ohm" P="0 dBm" f="1 GHz" Temp="26.85"
+.SP:SP1 Type="lin" Start="1 GHz" Stop="20 GHz" Points="191" Noise="yes" NoiseIP="1" NoiseOP="2"
+
+# * NFmin should then be as high as possible
+# * StabFact > 1
+# * dB_S21 should then be as high as possible
+Eqn:Eqn1 NFmin="min(10*log10(Fmin))" StabFact="min(Rollet(S))" dB_S21="min(dB(S[2,1]))" Export="yes"
+
+C:C1 _net0 _net1 C="#C1#"

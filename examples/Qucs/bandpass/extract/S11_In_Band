@@ -1,0 +1,15 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:S11 In Band
+Note:
+#
+
+# Commands #
+#
+
+# Post Processing #
+MEASURE_VAR:   #SYMBOL#: SEARCH_FOR:'<indep S11_In_Band': S_COL:01: P_LINE:01: P_COL:01:20
+#

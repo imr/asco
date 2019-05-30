@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
 
 
 #include "version.h"
@@ -90,13 +93,21 @@ int main(int argc, char *argv[])
 		printf("          asco -hspice  <inputfile>.sp\n");
 		printf("          asco -ltspice <inputfile>.net\n");
 		printf("          asco -spectre <inputfile>.scs\n");
+		printf("          asco -qucs    <inputfile>.txt\n");
+		printf("          asco -general <inputfile>.*\n");
 		printf("\nDefault file extension is assumed if not specified\n\n\n");
 		exit(EXIT_FAILURE);
 	}
 
 
 	/**/
-	/*Step3: Initialization of all variables and strucutres*/
+	/*Step3: Initialization of all variables and structures*/
+	#ifdef __MINGW32__
+	{
+		WSADATA WSAData;
+		WSAStartup (0x0202, &WSAData);
+	}
+	#endif
 	if ((ccode = gethostname(hostname, sizeof(hostname))) != 0) {
 		printf("asco.c -- gethostname failed, ccode = %d\n", ccode);
 		exit(EXIT_FAILURE);
@@ -107,27 +118,6 @@ int main(int argc, char *argv[])
 		argv[2][ii-1]='\0';
 	if (*argv[1] == 45) /* 45="-" */
 		*argv[1]++;
-
-	#ifdef MPI /*If in parallel optimization mode, copy all files to /tmp/asco */
-	if (id) { /*If it is a slave process*/
-		pid=getpid();
-		getcwd(currentdir, sizeof(currentdir));
-
-		sprintf(optimizedir, "/tmp/asco%d", pid); /*allows multiple runs on the same computer name*/
-		/*sprintf(optimizedir, "/tmp/asco"); */        /*alow one run on each computer*/
-
-		sprintf(lkk, "mkdir %s > /dev/null", optimizedir);
-		system(lkk);
-		sprintf(lkk, "cp -rfp * %s> /dev/null", optimizedir);
-		system(lkk);
-
-	chdir(optimizedir);
-	}
-	#endif
-
-	getcwd(lkk, sizeof(lkk));
-	printf("INFO:  Current directory on '%s': %s\n", hostname, lkk);
-	fflush(stdout);
 
 	spice=0;
 	switch(*argv[1]) {
@@ -146,9 +136,9 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'l': /*LTspice*/
-			if (!strcmp(argv[1], "ltspice")) {
+			if (!strcmp(argv[1], "LTspice")) {
 				spice=3;
-				printf("INFO:  LTSpice initialization on '%s'\n", hostname);
+				printf("INFO:  LTspice initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;
@@ -156,6 +146,13 @@ int main(int argc, char *argv[])
 			if (!strcmp(argv[1], "spectre")) {
 				spice=4;
 				printf("INFO:  Spectre initialization on '%s'\n", hostname);
+				fflush(stdout);
+			}
+			break;
+		case 'q': /*Qucs*/
+			if (!strcmp(argv[1], "qucs")) {
+				spice=50;
+				printf("INFO:  Qucs initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;
@@ -171,6 +168,24 @@ int main(int argc, char *argv[])
 			fflush(stdout);
 			exit(EXIT_FAILURE);
 	}
+
+	#ifdef MPI /*If in parallel optimization mode, copy all files to /tmp/asco */
+	if (id) { /*If it is a slave process*/
+		pid=getpid();
+		getcwd(currentdir, sizeof(currentdir));
+
+		sprintf(optimizedir, "/tmp/asco%d", pid); /*allows multiple runs on the same computer name*/
+		/*sprintf(optimizedir, "/tmp/asco"); */        /*alow one run on each computer*/
+
+		sprintf(lkk, "mkdir %s > /dev/null", optimizedir);
+		system(lkk);
+		sprintf(lkk, "cp -rfp * %s> /dev/null", optimizedir);
+		system(lkk);
+
+	chdir(optimizedir);
+	}
+	#endif
+
 	if (spice) {
 		if (initialize(argv[2]))
 			exit(EXIT_FAILURE);
@@ -182,25 +197,48 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	getcwd(lkk, sizeof(lkk));
+	printf("INFO:  Current directory on '%s': %s\n", hostname, lkk);
+	fflush(stdout);
+
 
 	/**/
 	/*Step4: Call optimization routine*/
-	printf("\n                         PRESS CTRL-C TO ABORT");
-	fflush(stdout);
 	if (spice) {
 		/*Global optimizer(s)*/
+		#ifdef MPI
+		if (id) { /*If it is a slave process*/
+			printf("\n\nINFO:  Starting global optimizer on '%s'...\n", hostname);
+			fflush(stdout);
+		} else {
+			printf("\n                         PRESS CTRL-C TO ABORT");
+			fflush(stdout);
+			printf("\n\n");
+			fflush(stdout);
+		}
+		#else
+		printf("\n                         PRESS CTRL-C TO ABORT");
+		fflush(stdout);
 		printf("\n\nINFO:  Starting global optimizer on '%s'...\n", hostname);
 		fflush(stdout);
+		#endif
 		DE(argc, argv); /*Rainer Storn and Ken Price Differential Evolution (DE)*/
 		/* Wobj=10; Wcon=100; */
 		/* opt(argc, argv); */ /*Tibor Csendes: GLOBAL*/
 
 		/*Local optimizer(s)*/
 		/* Wobj=10; Wcon=100; */
-		printf("\n\nINFO:  Starting local optimizer on '%s'...\n", hostname);
-		fflush(stdout);
-		HJ(argc, argv); /*Hooke and Jeeves*/
-		/* NM(argc, argv); */ /*Nelder-Mead*/
+		#ifdef MPI
+		if ((MPI_EXXIT==0) & (id==0)) { /*Cannot print in MPI if Ctrl-C has been pressed because SSH is immediatly killed*/
+		#else
+		{
+		#endif
+			printf("\n\nINFO:  Starting local optimizer on '%s'...\n", hostname);
+			fflush(stdout);
+
+			HJ(argc, argv); /*Hooke and Jeeves*/
+			/* NM(argc, argv); */ /*Nelder-Mead*/
+		}
 	}
 
 
@@ -215,10 +253,13 @@ int main(int argc, char *argv[])
 			case 2: /*HSPICE*/
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
 				break;
-			case 3: /*LTSpice*/
+			case 3: /*LTspice*/
 				sprintf(lkk, "cp -fp %s.log.log %s/%s_%d.log.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
 				break;
 			case 4: /*Spectre*/
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
+				break;
+			case 50: /*Qucs*/
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid); /* hostname is "longmorn" */
 				break;
 			case 100: /*general*/
@@ -236,7 +277,9 @@ int main(int argc, char *argv[])
 		/* chdir(currentdir); */
 	}
 	#endif
-	printf("INFO:  ASCO has ended on '%s'.\n", hostname);
-	fflush(stdout);
+	if (MPI_EXXIT==0) { /*Cannot print in MPI if Ctrl-C has been pressed because SSH is immediatly killed*/
+		printf("INFO:  ASCO has ended on '%s'.\n", hostname);
+		fflush(stdout);
+	}
 	return(EXIT_SUCCESS);
 }

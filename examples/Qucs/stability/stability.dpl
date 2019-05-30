@@ -1,0 +1,33 @@
+<Qucs Schematic 0.0.9>
+<Properties>
+  <View=-46,0,637,520,1,0,0>
+  <Grid=10,10,0>
+  <DataSet=Stability.dat>
+  <DataDisplay=Stability.sch>
+  <OpenDisplay=1>
+</Properties>
+<Symbol>
+</Symbol>
+<Components>
+</Components>
+<Wires>
+</Wires>
+<Diagrams>
+  <Rect 50 230 240 160 3 #c0c0c0 1 00 1 0 5e+09 2e+10 1 3.86761 5 13.0045 1 -1 1 1 315 0 225 "" "" "">
+	<"dB_S21" #0000ff 2 3 0 0 0>
+	  <Mkr 5e+09 73 -206 6 0 0>
+  </Rect>
+  <Rect 350 230 240 160 3 #c0c0c0 1 00 1 0 5e+09 2e+10 1 0.927892 0.2 1.6 1 -1 1 1 315 0 225 "" "" "">
+	<"NFmin" #0000ff 2 3 0 0 0>
+  </Rect>
+  <Rect 350 440 240 160 3 #c0c0c0 1 00 1 0 5e+09 2e+10 1 0.977698 0.2 1.45189 1 -1 1 1 315 0 225 "" "" "">
+	<"StabFact" #0000ff 2 3 0 0 0>
+  </Rect>
+  <Tab 30 347 257 57 3 #c0c0c0 1 00 1 0 1 1 1 0 1 1 1 0 1 1 315 0 225 "" "" "">
+	<"Gain" #0000ff 0 3 1 0 0>
+	<"NoiseFigure" #0000ff 0 3 1 0 0>
+	<"Stable" #0000ff 0 3 1 0 0>
+  </Tab>
+</Diagrams>
+<Paintings>
+</Paintings>

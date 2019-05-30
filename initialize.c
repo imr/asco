@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
 
 
 #include "auxfunc.h"
@@ -320,12 +323,11 @@ int initialize(char *filename) /* , double *x) */
 						printf("initialize.c - Step2 -- Number defined as INT is not integer in line: '%s'\n", lkk);
 						exit(EXIT_FAILURE);
 					}
-					if ((parameters[i].maximum-parameters[i].minimum) <= 0) {
-						printf("initialize.c - Step2 -- Minimum and Maximum are equal in line: '%s'\n", lkk);
-						exit(EXIT_FAILURE);
-					}
+					/* if ((parameters[i].maximum-parameters[i].minimum) <= 0) {
+						printf("INFO:  initialize.c - Step2 -- Minimum and Maximum are equal in line: '%s'\n", lkk);
+					} */
 				}
-				if (parameters[i].format==2) {  /*validation*/
+				if (parameters[i].format==0) {  /*validation*/
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
 				}
@@ -425,11 +427,14 @@ int initialize(char *filename) /* , double *x) */
 		case 2: /*HSPICE*/
 			sprintf(laux, "%s%s", filename, ".sp");
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			sprintf(laux, "%s%s", filename, ".net");
 			break;
 		case 4: /*Spectre*/
 			sprintf(laux, "%s%s", filename, ".scs");
+			break;
+		case 50: /*Qucs*/
+			sprintf(laux, "%s%s", filename, ".txt");
 			break;
 		case 100: /*general*/
 			sprintf(laux, "%s%s", filename, ".txt");
@@ -501,13 +506,15 @@ int initialize(char *filename) /* , double *x) */
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
 				printf("initialize.c - Step4.1 -- End not found in <inputfile>.*\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
 		case 4: /*Spectre*/                 /* ".end" does not exist in Spectre syntax */
+			break;
+		case 50: /*Qucs*/                   /* ".end" does not exist in Qucs syntax */
 			break;
 		case 100: /*general*/
 			break;
@@ -521,7 +528,7 @@ int initialize(char *filename) /* , double *x) */
 			break;
 		case 2: /*HSPICE*/
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			break;
 		case 4: /*Spectre*/
 			fclose(fspice_tmp);
@@ -562,6 +569,8 @@ int initialize(char *filename) /* , double *x) */
 				}
 			}
 			break;
+		case 50: /*Qucs*/
+			break;
 		case 100: /*general*/
 			break;
 		default:
@@ -583,9 +592,10 @@ int initialize(char *filename) /* , double *x) */
 			exit(EXIT_FAILURE);
 		}
 
+		strcpy(laux,lkk);
 		ReadKey(lkk, "# Commands #", fextract);
 		if (strcmp(lkk, "# Commands #")) {            /*finds "# Commands #" and writes to <hostname>.tmp until the end of file*/
-			printf("initialize.c - Step4.2 -- Wrong format in file: %s\n", measurements[i].meas_symbol);
+			printf("initialize.c - Step4.2 -- Wrong format in file: %s\n", laux);
 			exit(EXIT_FAILURE);
 		}
 
@@ -602,11 +612,14 @@ int initialize(char *filename) /* , double *x) */
 			case 2: /*HSPICE*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
 				break;
-			case 3: /*LTSpice*/
+			case 3: /*LTspice*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
 				break;
 			case 4: /*Spectre*/
   				fprintf(fspice_tmp, "// %i) Extract \'%s\'\n", i+1, lkk);
+				break;
+			case 50: /*Qucs*/
+  				fprintf(fspice_tmp, "# %i) Extract \'%s\'\n", i+1, lkk);
 				break;
 			case 100: /*general*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
@@ -633,9 +646,11 @@ int initialize(char *filename) /* , double *x) */
 					break;
 				case 2: /*HSPICE*/
 					break;
-				case 3: /*LTSpice*/
+				case 3: /*LTspice*/
 					break;
 				case 4: /*Spectre*/
+					break;
+				case 50: /*Qucs*/
 					break;
 				case 100: /*general*/
 					break;
@@ -676,7 +691,7 @@ int initialize(char *filename) /* , double *x) */
 					sprintf(lkk, " %s%s=", UNIQUECHAR, measurements[i].meas_symbol);
 					Str2Lower(lkk);
 					break;
-				case 3: /*LTSpice*/
+				case 3: /*LTspice*/
 					sprintf(lkk, "%s%s:", UNIQUECHAR, measurements[i].meas_symbol);
 					Str2Lower(lkk);
 					break;
@@ -688,6 +703,8 @@ int initialize(char *filename) /* , double *x) */
 						ccode++;
 					}
 					strcat(lkk, " =");
+					break;
+				case 50: /*Qucs*/
 					break;
 				case 100: /*general*/
 					break;
@@ -718,7 +735,7 @@ int initialize(char *filename) /* , double *x) */
 		case 2: /*HSPICE*/
 			fprintf(fspice_tmp, "%s\n", ".end");
 			break;
-		case 3: /*LTSpice*/
+		case 3: /*LTspice*/
 			fprintf(fspice_tmp, "%s\n", ".end");
 			break;
 		case 4: /*Spectre*/
@@ -769,6 +786,8 @@ int initialize(char *filename) /* , double *x) */
 				}
 			}
 	/*Special case to deal with Spectre MDL*/
+			break;
+		case 50: /*Qucs*/
 			break;
 		case 100: /*general*/
 			break;

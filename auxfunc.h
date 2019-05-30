@@ -39,4 +39,5 @@ int P_eof(FILE *f);
 
 
 char lkk[LONGSTRINGSIZE];
-int spice; /* 1:Eldo, 2:HPSPICE, 3:LTspice, 4:Spectre */
+int spice; /* 1:Eldo, 2:HPSPICE, 3:LTspice, 4:Spectre, 50:Qucs */
+int MPI_EXXIT; /* exits MPI if set to 1*/

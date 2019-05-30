@@ -1,0 +1,28 @@
+<Qucs Schematic 0.0.9>
+<Properties>
+  <View=0,0,593,467,1,0,0>
+  <Grid=10,10,0>
+  <DataSet=bandpass.dat>
+  <DataDisplay=bandpass.sch>
+  <OpenDisplay=1>
+</Properties>
+<Symbol>
+</Symbol>
+<Components>
+</Components>
+<Wires>
+</Wires>
+<Diagrams>
+  <Rect 130 340 335 296 3 #c0c0c0 1 01 1 8e+08 1e+08 1.2e+09 1 0.003 1 1 1 -1 0.5 1 315 0 225 "" "" "">
+	<"S[1,1]" #0000ff 2 3 0 0 0>
+	<"S[2,1]" #ff0000 2 3 0 0 0>
+  </Rect>
+  <Tab 40 467 553 67 3 #c0c0c0 1 00 1 0 1 1 1 0 1 1 1 0 1 1 315 0 225 "" "" "">
+	<"Left_Side_Lobe" #0000ff 0 6 0 0 0>
+	<"Pass_Band_Ripple" #0000ff 0 6 0 0 0>
+	<"Right_Side_Lobe" #0000ff 0 6 0 0 0>
+	<"S11_In_Band" #0000ff 0 6 0 0 0>
+  </Tab>
+</Diagrams>
+<Paintings>
+</Paintings>

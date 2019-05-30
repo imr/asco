@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
@@ -18,7 +18,7 @@
  * http://home.earthlink.net/~mfhutt
  * 11/3/97
  * $Id: nmlatest.c,v 1.2 2004/10/04 15:21:22 mike Exp $
- * 
+ *
  * An implementation of the Nelder-Mead simplex method applied to
  * Rosenbrock's function.
  *
@@ -55,7 +55,6 @@
 #include <malloc.h>
 #include <math.h>
 
-
 /* #include "auxfunc.h" */
 #include "initialize.h"
 
@@ -74,8 +73,6 @@ double f_rosen(int D, double x[])
 {
   return (100*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0])+(1.0-x[0])*(1.0-x[0]));
 }
-
-
 
 
 double simplex(double start[],int n, double EPSILON, double scale, char *filename)
@@ -104,7 +101,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
   double fsum,favg,s,cent;
   
   /* dynamically allocate arrays */
-  
+
   /* allocate the rows of the arrays */
   v =  (double **) malloc ((n+1) * sizeof(double *));
   f =  (double *) malloc ((n+1) * sizeof(double));
@@ -235,7 +232,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 	f[vg] = fr;
       }
     }
-    
+
     /* check to see if a contraction is necessary */
     if (fr >= f[vh]) {
       if (fr < f[vg] && fr >= f[vh]) {
@@ -339,20 +336,14 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
   return min;
 }
 
-
-
-
 /* int main(int argc, char *argv[]) */
 int NM(int argc, char *argv[])
 {
-	double start[250];
+	double start[250]; /* double start[] = {-1.2,1.0}; */
 	double min;
 	int i, nvars;
 
-	/* starting guess for rosenbrock test function */
 	/* nvars = 2; */
-	/* start[0] = -1.2; */
-	/* start[1] = 1.0; */
 	nvars=0;
 	while (parameters[nvars].name[0]  != '\0')
 		nvars++;                                     /*---number of parameters---------------*/

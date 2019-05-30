@@ -1,0 +1,15 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Left Side Lobe
+Note:
+#
+
+# Commands #
+#
+
+# Post Processing #
+MEASURE_VAR:   #SYMBOL#: SEARCH_FOR:'<indep Left_Side_Lobe': S_COL:01: P_LINE:01: P_COL:01:20
+#

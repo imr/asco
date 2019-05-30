@@ -133,7 +133,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 				fprintf(fout, " vto%d=AGAUSS(0, '%s*1e-9', 1)\n", *ptr, DeltaVt);
 				break;
 			case 3: /*LTspice*/
-				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for LTSpice\n");
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for LTspice\n");
 				exit(EXIT_FAILURE);
 				break;
 			case 4: /*Spectre*/

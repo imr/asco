@@ -4,7 +4,7 @@
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTSpice' and 'Spectre' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
  *
  */
 
@@ -345,7 +345,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 									break;
 								case 2: /*HSPICE*/
 									break;
-								case 3: /*LTSpice*/
+								case 3: /*LTspice*/
 									k = strpos2(laux2, "'", 1);
 									if(k) {
 										k=1;
@@ -354,6 +354,8 @@ int RFModule(char *line, int optimize, FILE* fout)
 									}
 									break;
 								case 4: /*Spectre*/
+									break;
+								case 50: /*Qucs*/
 									break;
 								case 100: /*general*/
 									break;
