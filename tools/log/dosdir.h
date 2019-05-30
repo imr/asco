@@ -79,7 +79,7 @@
 #  define DD_ISARCH(m)   (0)
 #endif /* ?MSDOS */
 
-#if (defined(UNIX) || defined(VMS))
+#if (defined(UNIX) || defined(VMS) || defined(__MINGW32__))
 #  include <errno.h>
 #  ifndef ENOENT
 #    define ENOENT -1

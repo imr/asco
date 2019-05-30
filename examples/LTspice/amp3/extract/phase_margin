@@ -1,0 +1,12 @@
+# Info #
+Name:Phase margin
+Symbol:ZPM
+Unit:deg
+Analysis type:AC
+Definition:PM = 180 deg + phase at UGF
+Note: 
+#
+
+# Commands #
+.MEASURE AC #SYMBOL# FIND V(VOUT)/V(VN) WHEN 20*log10(V(VOUT)/V(VN)) 0
+#

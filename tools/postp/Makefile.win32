@@ -1,0 +1,15 @@
+#
+CC = gcc
+CFLAGS = -Os
+
+
+#
+all: ../auxfunc/auxfunc.o auxfunc_updatelis.o auxfunc_measurefromlis.o postp
+
+postp:
+	$(CC) $(CFLAGS) -o postp.exe ../auxfunc/auxfunc.o auxfunc_updatelis.o auxfunc_measurefromlis.o postp.c -lm
+	strip postp.exe
+
+clean::
+	rm -f *.o
+	rm postp.exe

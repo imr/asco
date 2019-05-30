@@ -22,7 +22,6 @@
 #include <sys/wait.h>
 #else
 #include <winsock2.h>
-#define SIGQUIT 3
 #endif
 
 
@@ -111,7 +110,7 @@ double CostFunction()
 				if (measurements[i].measured_value <= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (measurements[i].constraint_value==0) {                       /*special case when constraint==0*/
+					if (fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -128,7 +127,7 @@ double CostFunction()
 				if (measurements[i].measured_value >= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (measurements[i].constraint_value==0) {                       /*special case when constraint==0*/
+					if (fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -142,7 +141,7 @@ double CostFunction()
 
 			case 6: /*EQ                                            ===> constraint (EQ)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
-				if (measurements[i].constraint_value==0) {                               /*special case when constraint==0*/
+				if (fcmp(measurements[i].constraint_value, 0)) {                         /*special case when constraint==0*/
 					if ( (measurements[i].measured_value >= (-tolerance)) &&
 					     (measurements[i].measured_value <= (+tolerance)) )
 						cost = cost;                                             /*no penalty*/
@@ -174,8 +173,8 @@ double CostFunction()
 		printf("errfunc.c - CostFunction -- Cost cannot be negative!\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((cost<1e-20) && (spice<100)) { /* In SPICE, it is very unlikely that the cost is anywhere close to 0 */
-		printf("INFO:  errfunc.c - CostFunction -- Cost is very close to zero, probably due to an error.\n");
+	if ((cost<1e-21) && (spice<100)) { /* In SPICE, it is very unlikely that the cost is anywhere close to 0 */
+		printf("INFO:  errfunc.c - CostFunction -- Cost is very close to zero. This can either be (a) due to an error or because (b) there is not an objective in category # Measurements # in the *.cfg file.\n");
 		fflush(stdout);
 	}
 	return (cost);
@@ -303,16 +302,14 @@ void WriteToMem(int num_measures)
 					if (ii) {                                                    /* so specific code is added in here to cope with the difference */
 						strsub(laux, measure[i].data, ii+1, LONGSTRINGSIZE); /*                                                               */
 						strcpy(measure[i].data, laux);                       /*                                                               */
-						if (strpos2(laux, "dB,", 1)) {                               /*measure the AC magnitude*/
-							ii=1;                                                /*measure the AC magnitude*/
-							ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0); /*measure the AC magnitude*/
-							strcpy(measure[i].data, laux);                       /*measure the AC magnitude*/
-						}                                                            /*measure the AC magnitude*/
-						/*if (strpos2(laux, "dB,", 1)) {                              */ /*measure the AC phase*/
-						/*	ii=1;                                                 */ /*measure the AC phase*/
-						/*	ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); */ /*measure the AC phase*/
-						/*	strcpy(measure[i].data, laux);                        */ /*measure the AC phase*/
-						/*}                                                           */ /*measure the AC phase*/
+						if (strpos2(laux, "dB,", 1)) {                               /*Is the measurement a complex AC signal?*/
+							ii=1;
+							if (strpos2(measure[i].search, "phase", 1))
+								ReadSubKey(laux, measure[i].data, &ii, ',', 0xB0, 0); /*measure the AC phase    */
+							else
+								ReadSubKey(laux, measure[i].data, &ii, '(', 'd', 0);  /*measure the AC magnitude*/
+							strcpy(measure[i].data, laux);
+						}
 					}
 					break;
 				case 4: /*Spectre*/
@@ -352,12 +349,27 @@ void WriteToMem(int num_measures)
 				j++;
 			}
 
-			strcpy(laux, measure[i].data);                                       /*3- read measurement                                               */
-			StripSpaces(laux);
+			if (strlen(measure[i].data)) {
+				strcpy(laux, measure[i].data);                               /*3- read measurement                                               */
+				StripSpaces(laux);
+			} else {
+				#ifdef DEBUG
+				i--;                             /* to keep the same code from initialize.c */
+				sprintf(lkk, "%i", i);                    /* to remove integer added in (*) */
+				ii=(int)strlen(lkk);                      /* to remove integer added in (*) */
+				strcpy(lkk, measurements[i].meas_symbol); /* to remove integer added in (*) */
+				lkk[strlen(lkk)-ii]='\0';                 /* to remove integer added in (*) */
+
+				printf("INFO:  errfunc.c - WriteToMem -- Data not read for measurement in *.cfg: %s\n", lkk);
+				fflush(stdout);
+
+				i++;
+				#endif
+			}
 
 			measurements[j].measured_value=asc2real(laux, 1, (int)strlen(laux)); /*4- convert it to double                                           */
 
-			if (measurements[j].measured_value==0) {                            /*5- Check NaN and other text strings                               */
+			if (fcmp(measurements[j].measured_value, 0)) {                       /*5- check NaN and other text strings                               */
 				if ((laux[0] < 43) || (laux[0] > 57) ) /*if its text*/
 					if (measurements[j].objective_constraint == 4) /*4=LE*/
 						measurements[j].measured_value=+1e+30; /*so that a large cost is later assigned*/
@@ -512,19 +524,35 @@ double errfunc(char *filename, double *x)
 			sprintf(lkk, "nice -n 19 eldo -noconf -i %s.cir > %s.out", hostname, hostname);
 			break;
 		case 2: /*HSPICE*/
+			#ifndef __MINGW32__
 			sprintf(lkk, "nice -n 19 hspice -i %s.sp -o %s.lis > /dev/null", hostname, hostname);
+			#else
+			sprintf(lkk, "hspice -i %s.sp -o %s.lis > NUL", hostname, hostname);
+			#endif
 			break;
 		case 3: /*LTspice*/
+			#ifndef __MINGW32__
 			sprintf(lkk, "nice -n 19 ltspice -b %s.net > /dev/null", hostname);
+			#else
+			sprintf(lkk, "ltspice -b %s.net > NUL", hostname);
+			#endif
 			break;
 		case 4: /*Spectre*/
 			sprintf(lkk, "nice -n 19 spectremdl -batch %s.mdl -design %s.scs > /dev/null", hostname, hostname);
 			break;
 		case 50: /*Qucs*/
+			#ifndef __MINGW32__
 			sprintf(lkk, "nice -n 19 qucsator -i %s.txt -o %s.dat > /dev/null", hostname, hostname);
+			#else
+			sprintf(lkk, "qucsator -i %s.txt -o %s.dat > NUL", hostname, hostname);
+			#endif
 			break;
 		case 100: /*general*/
+			#ifndef __MINGW32__
 			sprintf(lkk, "nice -n 19 ./general.sh %s %s", hostname, hostname);
+			#else
+			sprintf(lkk, "./general.sh %s %s", hostname, hostname);
+			#endif
 			break;
 		default:
 			printf("errfunc.c - Step3 -- Something unexpected has happened!\n");

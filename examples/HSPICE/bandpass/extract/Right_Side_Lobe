@@ -1,0 +1,12 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Right Side Lobe
+Note:
+#
+
+# Commands #
+.MEASURE AC #SYMBOL# max S21(db) from=1100e6 to=1200e6
+#

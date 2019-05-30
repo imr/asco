@@ -1,0 +1,16 @@
+# Info #
+Name:Unity gain frequency
+Symbol:ZUGF
+Unit:Hz
+Analysis type:AC
+Definition:UGF = frequency where gain dropped to 1=0 dB
+Note: 
+#
+
+# Commands #
+.MEASURE AC UGF TARG 20*log10(V(VOUT)/V(VN)) VAL 0
+#
+
+# Post Processing #
+MEASURE_VAR:   #SYMBOL#: SEARCH_FOR:'ugf='
+#

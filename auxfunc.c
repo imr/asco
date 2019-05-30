@@ -26,6 +26,8 @@
 /*BEGIN*/
 /*Run-time library for use with "p2c", the Pascal to C translator*/
 #include <stdio.h>
+/* #include <ctype.h> */
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -113,6 +115,21 @@ int strpos2(char *s, register char *pat, register int pos)
 /*###################################################################################
    ###################################################################################
    ###################################################################################*/
+
+
+
+
+/*
+ * Compares two floating point numbers to a given precision.
+ * Returns '1'  if they equal and '0' otherwise.
+ */
+int fcmp(double a, double b)
+{
+	if (fabs(a-b) < 1e-50) /*Accuracy is 1e-50*/
+		return 1;
+	else
+		return 0;
+}
 
 
 

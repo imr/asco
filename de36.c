@@ -111,8 +111,8 @@
 void  assignd(int D, double a[], double b[]);
 double rnd_uni(long *idum);    /* uniform pseudo random number generator */
 extern double evaluate(int D, double tmp[], char *filename); /* obj. funct. */
-void sigproc(int);
-void quitproc(int);
+void SIGINTproc(int);
+void SIGQUITproc(int);
 
 /*---------Function definitions-----------------------------------------*/
 
@@ -197,6 +197,50 @@ double rnd_uni(long *idum)
 
 #ifdef MPI
 /*
+ * Calculate load of the running computer, considering the existing number of CPUs
+ */
+double LoadAVG()
+{
+	int i, processor=0;
+	double loadavg=0;
+	FILE  *fpin_ptr;
+
+	system("cat /proc/cpuinfo | grep processor > cpuinfo");
+	if ((fpin_ptr =fopen("cpuinfo" ,"r")) == 0) {
+		printf("de36.c - LoadAVG -- Cannot open file 'cpuinfo'.\n");
+		exit(EXIT_FAILURE);
+	}
+	while (!feof(fpin_ptr)) {
+		ReadKey(lkk, "processor\t:", fpin_ptr);
+		if (strcmp(lkk, "processor       :")) {
+			/* printf("%s\n", lkk); */
+			/* fflush(stdout);      */
+			processor++;
+		}
+	}
+
+	system("cat /proc/loadavg > loadavg");
+	if ((fpin_ptr =fopen("loadavg" ,"r")) == 0) {
+		printf("de36.c - LoadAVG -- Cannot open file 'loadavg'.\n");
+		exit(EXIT_FAILURE);
+	}
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);       /*read and*/
+	i = strpos2(lkk, " ", 1);
+	if (i != 0)
+		lkk[i]='\0';
+	/* printf("%s\n", lkk); */
+	loadavg=asc2real(lkk, 1, (int)strlen(lkk));
+
+	/* printf("nproc=%i    load=%e\n", processor, loadavg);
+	 * printf("load/proc=%E\n", loadavg/processor);
+	 * fflush(stdout); */
+
+	return(loadavg/processor);
+}
+
+
+
+/*
  * equalizes the time each process takes to finish the given number of
  * simulations to decrease the optimization time, i.e., load balancing
  */
@@ -205,10 +249,12 @@ void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, i
 	int i, j, k;
 	double t_min[2]={0, 1.7976931348623157e+308}; /*fastest process: index and minimum value for minimum_simulation_time*/
 	double t_dif, total_time=0;
-	double t_avg[MAXPOP];
+	double t_avg[MAXPOP][2]; /* [index, t_avg] for each process*/
 	int out_of_bound[MAXPOP]={0}; /*total number of out-of-bound simulations in each process*/
 	static double t_avg_ofb[MAXPOP]={0}; /*average time, to use should all simulations are out-of-bound*/
-
+	int gap;          /*for Shell sort*/
+	double value[2];  /*for Shell sort*/
+	int lower, upper; /*for Shell sort*/
 
 	/**/
 	/*Step1: for each process, finds how many simulations were out-of-bound*/
@@ -230,27 +276,30 @@ void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, i
 	/*finds minimum value for average_simulation_time**/
 		t_dif = difftime(t_end[i], t_start[0]);
 		if (t_dif<1)
-			t_dif=1; /*number '1' is just avoid special case when t_dif=0; happens for very fast simulations*/
+			t_dif=1;            /*number '1' is just avoid special case when t_dif=0; happens for very fast simulations*/
 
 		if ((sendcount[i]/MAXDIM) > out_of_bound[i]) { /*if at least one simulation was in-bound*/
-			t_avg[i]=t_dif/(sendcount[i]/MAXDIM - out_of_bound[i]); /* average_simulation_time in each process*/
-			if (t_avg_ofb[i]<1) /*'first time' detection, coupled with 'special case' above*/
-				t_avg_ofb[i]=t_avg[i];
+			t_avg[i][1]=i;
+			t_avg[i][2]=t_dif/(sendcount[i]/MAXDIM - out_of_bound[i]); /*average_simulation_time in each process*/
+			if (t_avg_ofb[i]<1) /*'first time' detection, coupled with 'special case' above                            */
+				t_avg_ofb[i]=t_avg[i][2];
 			else
-				t_avg_ofb[i]=(t_avg_ofb[i] + t_avg[i])/2; /*update historic average time*/
-		} else
-			t_avg[i]=t_avg_ofb[i];                    /*use historic average value   */
+				t_avg_ofb[i]=(t_avg_ofb[i] + t_avg[i][2])/2; /*update historic average time*/
+		} else {
+			t_avg[i][1]=i;
+			t_avg[i][2]=t_avg_ofb[i]; /*use historic average value*/
+		}
 
-		if (t_avg[i] < t_min[1]) {
-			t_min[0] = i;        /*index position*/
-			t_min[1] = t_avg[i]; /*set new minimum time per simulation*/
+		if (t_avg[i][2] < t_min[1]) {
+			t_min[0] = i;           /*index position*/
+			t_min[1] = t_avg[i][2]; /*set new minimum time per simulation*/
 		}
 	}
 
 	/*total time, equal to the sum of all the previous avg values*/
 	total_time=0;
 	for (i = 1; i < ntasks; i++) {
-		total_time=total_time + 1/(t_avg[i]/t_min[1]);
+		total_time=total_time + 1/(t_avg[i][2]/t_min[1]);
 	}
 
 
@@ -258,27 +307,49 @@ void LoadBalancer(int *sendcount, int *displs, time_t *t_start, time_t *t_end, i
 	/*Step3: Calculates new sendcount, in two steps, using information obtained in Step1 and Step2*/
 	j=0;
 	/*Step3.1: initial guess*/
+	sendcount[0]=0; /* master does not perform calculations, so it receives 0 vectors */
 	for (i = 1; i < ntasks; i++) {
-		sendcount[i]=(int)rint((NP/total_time) * (1/(t_avg[i]/t_min[1]))); /*New proposal for sendcount*/
-		/*if (sendcount[i]==0)  */
-		/*	sendcount[i]=1; */ /*at least one is to be simulated on each process*/
+		sendcount[i]=(int)rint((NP/total_time) * (1/(t_avg[i][2]/t_min[1]))); /*New proposal for sendcount*/
 		j=j+sendcount[i];
 	}
 
 	/*Step3.2: correct sendcount with previous 'j' value*/
-	j=NP-j; /*if positive, add; if negative, subtract*/
-	/* Adding the penalty only to the fastest process is not the best method. */
-	/* An improved solution is to spreed the penalty among all the fastest    */
-	/* processes such as each one of them simulate one more simulation        */
-	if (j>0)
-		sendcount[(int)t_min[0]]=sendcount[(int)t_min[0]]+j; /*add to the fastest process*/
-	else {
-		if ( abs(j) <= abs(sendcount[(int)t_min[0]]) ) /*error, i.e. 'j', is larger than sendcount[i] which implies*/
-			sendcount[(int)t_min[0]]=sendcount[(int)t_min[0]]+j; /*subtract from the fastest process*/
-		else {                                         /*that panic mode correction  must be used                  */
-			for (i=1; i<=abs(j); i++) {
-				if (sendcount[i]) /*decreases only if sendcount[i]>='1'*/
-					sendcount[i]--;
+	k=NP-j; /*if positive, add; if negative, subtract*/
+
+	/*Step3.2.1: Sort average simulation times using 'Shell sort'*/
+	if(k) { /*only sorts if correction is necessary*/
+		lower=0;
+		upper=ntasks;
+		for (gap = 1; gap <= (upper-lower)/4; gap = 2*gap); /*Initial gap value*/
+		for ( ; gap>0; gap=gap/2) {
+			for (i = lower+gap; i <= upper-1; i++) {
+				value[1] = t_avg[i][1];
+				value[2] = t_avg[i][2];
+				j = i;
+				while ( (j >= lower+gap) && (value[2] < t_avg[j-gap][2]) ) {
+					t_avg[j][1] = t_avg[j-gap][1];
+					t_avg[j][2] = t_avg[j-gap][2];
+					j = j-gap;
+				}
+				t_avg[j][1] = value[1];
+				t_avg[j][2] = value[2];
+			}
+		}
+
+	/*Step3.2.2: uppon sorting, add/remove 1 penalty penalty to each of the k fastest processes*/
+		i=1;
+		if (k>0) {
+			while (k!=0) {
+				sendcount[(int)t_avg[i][1]]++;
+				i++;
+				k--;
+			}
+		} else {
+			while (k!=0) {
+				if (sendcount[(int)t_avg[i][1]])
+					sendcount[(int)t_avg[i][1]]--;
+				i++;
+				k++;
 			}
 		}
 	}
@@ -398,11 +469,6 @@ int DE(int argc, char *argv[])
    char laux[LONGSTRINGSIZE];
    int ii;
 
-/*------Initializations----------------------------*/
-	signal(SIGINT, sigproc);   /* Ctrl-C detection*/
-	signal(SIGQUIT, quitproc); /* Ctrl-\ detection*/
-
-/*mpi: MPI initialization*/
 	#ifdef MPI
 	double tmp_y[MAXPOP][MAXDIM], trial_cost_y[MAXPOP];
 	int k, m, count;
@@ -415,7 +481,14 @@ int DE(int argc, char *argv[])
 	time_t t_start[MAXPOP], t_end[MAXPOP]; /*evaluates time each process spend simulating*/
 	double t_dif;
 	int sendcount[MAXPOP], displs[MAXPOP];      /* Arrays for sendcounts and displacements */
+	#endif
 
+/*------Initializations----------------------------*/
+	signal(SIGINT, SIGINTproc);   /* Ctrl-C detection*/
+	signal(SIGQUIT, SIGQUITproc); /* Ctrl-\ detection*/
+
+/*mpi: MPI initialization*/
+	#ifdef MPI
 	err = MPI_Comm_size(MPI_COMM_WORLD, &ntasks); /* Get nr of tasks */
 	err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
 	if (ntasks < 2) {
@@ -424,95 +497,86 @@ int DE(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-
-
 	m=ntasks-1;  /*number of slave machines*/
 	#endif
 /*mpi: MPI initialization*/
 
 
 /*-----Read input data------------------------------------------------*/
+	sprintf(laux, "%s%s", argv[2], ".cfg");
 
+	fpin_ptr   = fopen(laux,"r"); /*fpin_ptr   = fopen(argv[1],"r");*/
 
+	if (fpin_ptr == NULL)
+	{
+		printf("de36.c - Cannot open input file: %s\n", laux);
+		exit(EXIT_FAILURE);
+	}
 
-sprintf(laux, "%s%s", argv[2], ".cfg");
+	ReadKey(lkk, "#DE#", fpin_ptr); /* .cfg file*/
+	if (strcmp(lkk, "#DE#"))
+	{
+		printf("\nde36.c - Cannot find #DE# category in %s.cfg\n", argv[2]);
+		exit(EXIT_FAILURE);
+	}
 
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	strategy=(int)asc2real(laux, 1, (int)strlen(laux));   /*---choice of strategy-----------------*/
 
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	genmax=(int)asc2real(laux, 1, (int)strlen(laux));     /*---maximum number of generations------*/
 
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	refresh=(int)asc2real(laux, 1, (int)strlen(laux));    /*---output refresh cycle---------------*/
 
+	/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
+	/*ii=1; ReadSubKey(laux, lkk, &ii, ':', ':');*/
+	/*D=asc2real(laux, 1, (int)strlen(laux));*/           /*---number of parameters---------------*/
+	D=0;
+	while (parameters[D].name[0]  != '\0')
+		D++;                                          /*---number of parameters---------------*/
+	#ifdef ROSEN_REGRESSION
+	D=2;
+	#endif
 
-fpin_ptr   = fopen(laux,"r"); /*fpin_ptr   = fopen(argv[1],"r");*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	NP=(int)asc2real(laux, 1, (int)strlen(laux));         /*---population size.-------------------*/
 
- if (fpin_ptr == NULL)
- {
-    printf("de36.c - Cannot open input file: %s\n", laux);
-    exit(EXIT_FAILURE);
- }
+	/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
+	inibound_h=+10;                                       /*---upper parameter bound for init-----*/
 
-ReadKey(lkk, "#DE#", fpin_ptr); /* .cfg file*/
-if (strcmp(lkk, "#DE#"))
-{
-	printf("\nde36.c - Cannot find #DE# category in %s.cfg\n", argv[2]);
-	exit(EXIT_FAILURE);
-}
+	/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
+	inibound_l=-10;                                       /*---lower parameter bound for init-----*/
 
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-strategy=asc2real(laux, 1, (int)strlen(laux));   /*---choice of strategy-----------------*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	F=asc2real(laux, 1, (int)strlen(laux));               /*---weight factor----------------------*/
 
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-genmax=asc2real(laux, 1, (int)strlen(laux));     /*---maximum number of generations------*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	CR=asc2real(laux, 1, (int)strlen(laux));              /*---crossing over factor---------------*/
 
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-refresh=asc2real(laux, 1, (int)strlen(laux));    /*---output refresh cycle---------------*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	seed=(int)asc2real(laux, 1, (int)strlen(laux));       /*---random seed------------------------*/
 
-/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
-/*ii=1; ReadSubKey(laux, lkk, &ii, ':', ':');*/
-/*D=asc2real(laux, 1, (int)strlen(laux));*/          /*---number of parameters---------------*/
-D=0;
-while (parameters[D].name[0]  != '\0')
-	D++;                                     /*---number of parameters---------------*/
-#ifdef ROSEN_REGRESSION
-D=2;
-#endif
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	cvarmin=asc2real(laux, 1, (int)strlen(laux));         /*---minimum cost variance--------------*/
 
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-NP=asc2real(laux, 1, (int)strlen(laux));         /*---population size.-------------------*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	Wobj=asc2real(laux, 1, (int)strlen(laux));            /*---weights for the cost due to the objectives -------*/
 
-/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
-inibound_h=+10;                                  /*---upper parameter bound for init-----*/
+	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
+	ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
+	Wcon=asc2real(laux, 1, (int)strlen(laux));            /*---weights for the cost due to the constraints -------*/
 
-/*fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);*/
-inibound_l=-10;                                  /*---lower parameter bound for init-----*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-F=asc2real(laux, 1, (int)strlen(laux));          /*---weight factor----------------------*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-CR=asc2real(laux, 1, (int)strlen(laux));         /*---crossing over factor---------------*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-seed=asc2real(laux, 1, (int)strlen(laux));       /*---random seed------------------------*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-cvarmin=asc2real(laux, 1, (int)strlen(laux));    /*---minimum cost variance--------------*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-Wobj=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to the objectives -------*/
-
-fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);
-ii=1; ReadSubKey(laux, lkk, &ii, ':', ':', 4);
-Wcon=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to the constraints -------*/
-
-fclose(fpin_ptr);
+	fclose(fpin_ptr);
 
 	#ifdef MPI
 	if (ntasks > (NP+1)) {
@@ -521,37 +585,34 @@ fclose(fpin_ptr);
 		exit(EXIT_FAILURE);
 	}
 
-	if ( (MPI_METHOD==2) || ((MPI_METHOD==3) && (id==0)) ) { /* Method 2, 3: Master and Slave */
-		/* Initialize sendcount and displacements arrays */
 
-		/* Fills 'sendcount'*/
-		j=NP%m;                    /* remainder */
-		sendcount[0]=0; /* master does not perform calculations, so it receives 0 vectors */
-		for (i=1; i<ntasks; i++) {
-			sendcount[i]=NP/m; /* division */
-			if (j) {
-				sendcount[i]++;
-				j--;
+	if ( (MPI_METHOD==2) || (MPI_METHOD==3) ) { /* Method 2, 3: Master and Slave */
+		double loadavg=0;
+		if (id) { /*all but the Master do this*/
+			loadavg=LoadAVG();
+			err = MPI_Send(&loadavg, 1, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+		} else {
+			for (i=1; i<ntasks; i++) {
+				err = MPI_Recv(&loadavg, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
+				source_id = (status.MPI_SOURCE); /* Get id of sender */
+				cost[source_id]=loadavg; /*saves 'loadavg' for current process*/
+				/* printf ("MachineCost-- Slave %d has sended cost=%E\n", source_id, loadavg); */
+				/* fflush(stdout);                                                             */
 			}
 		}
-		/*Verification*/
-		j=0;
-		for (i=0; i<ntasks; i++) {
-			j=j+sendcount[i];
+	}
+	/*Performs load balancing: rearranges 'sendcount' and 'displs'*/
+	if ( (MPI_METHOD==2) || ((MPI_METHOD==3) && (id==0)) ) { /* Method 2, 3: Master and Slave */
+		for (i=1; i<ntasks; i++) {
+			sendcount[i]=MAXDIM;
+			t_start[i]=0;
+			t_end[i]=1;           /*a) Assumes a very fast simulation                */
+			if (cost[i]>1.5) {    /*b) If 'loadavg' is greater than 1.5, assume that */
+				t_end[i]=1e9; /*   the machine is too loaded and do not use it   */
+			}
 		}
-		if (j!=NP) { /* Just to rest assured that no error has been done */
-			printf("de36.c - j!=NP\n");
-			exit(EXIT_FAILURE);
-		}
-		for (i=0; i<ntasks; i++) {
-			sendcount[i]=sendcount[i]*MAXDIM;
-		}
-
-		/*Fills 'displs'*/
-		displs[0]=0; /* master */
-		displs[1]=0; /* slave number 1 */
-		for (i=2; i<ntasks; i++) {
-			displs[i]=sendcount[i-1] + displs[i-1];
+		if (MPI_EXXIT==0) {
+			LoadBalancer(sendcount, displs, t_start, t_end, ntasks, NP, cost);
 		}
 	}
 	#endif
@@ -562,7 +623,7 @@ fclose(fpin_ptr);
 		while(MPI_METHOD==1) { /* Method 1: Slave */
 			i=0;
 			err = MPI_Recv(tmp[i], D, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status); /* Receive a message */
-			if (tmp[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
+			if (fcmp(tmp[0][0], 1.7976931348623157e+308)) { /*DBL_MAX from <float.h>, exit message*/
 				MPI_Finalize();
 				return (EXIT_SUCCESS); /*exit*/
 			}
@@ -576,11 +637,11 @@ fclose(fpin_ptr);
 			/* An unexpected error exist with some combinations of 'D' and the total *
 			 * total number of processes if recvcount (number of elements in receive *
 			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
-			 * due to low values of D.                                               */
+			 * due to low values of D and/or NP.                                     */
 
 			/* Receive the scattered matrix from process 0, place it in array tmp */
-			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1000, MPI_DOUBLE, root, MPI_COMM_WORLD);
-			if (tmp_y[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1500, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			if (fcmp(tmp[0][0], 1.7976931348623157e+308)) { /*DBL_MAX from <float.h>, exit message*/
 				MPI_Finalize();
 				return (EXIT_SUCCESS); /*exit*/
 			}
@@ -604,10 +665,10 @@ fclose(fpin_ptr);
 			/* An unexpected error exist with some combinations of 'D' and the total *
 			 * total number of processes if recvcount (number of elements in receive *
 			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
-			 * due to low values of D.                                               */
+			 * due to low values of D and/or NP.                                     */
 
 			/* Receive the scattered matrix from process 0, place it in array tmp_y */
-			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1000, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, NP*D+1500, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
 			/*Calls optimization routine*/
 			for (i=0; i<sendcount[id]/MAXDIM; i++) {
@@ -724,7 +785,7 @@ fclose(fpin_ptr);
 	nfeval++;
 	if (NP) /*Ctrl-C detection*/
 		cost[i] = evaluate(D,c[i],argv[2]); /* obj. funct. value */
-	if (cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
+	if (fcmp(cost[i], 0)) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
 		sleep(1);
@@ -1063,7 +1124,7 @@ fclose(fpin_ptr);
 	nfeval++;
 	if (NP) /*Ctrl-C detection*/
 		trial_cost[i] = evaluate(D,tmp[i],argv[2]);  /* Evaluate new vector in tmp[] */
-	if (trial_cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
+	if (fcmp(trial_cost[i], 0)) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
 		NP=0;
 		genmax=0;
 		sleep(1);
@@ -1308,28 +1369,28 @@ fclose(fpin_ptr);
 
 /*-----------End of main()------------------------------------------*/
 
-void sigproc(int sig)
+void SIGINTproc(int sig) /* kill -s INT <pid> */
 {
-	signal(SIGINT, sigproc); /*  */
-	/* NOTE some versions of UNIX will reset signal to default
-	after each call. So for portability reset signal each time */
-
 	#ifdef MPI
 	int id, err;
+	#endif
+
+	signal(SIGINT, SIGINTproc); /* Reset signal each time for portability among *NIX versions*/
+
+	#ifdef MPI
 	if (MPI_EXXIT==0) {
-		err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
-		printf("INFO:  de36.c - sigproc -- Ctrl-C has been pressed. Be patient while all running simulations end. Exiting...  PID=%d\n",id);
+		err = MPI_Comm_rank(MPI_COMM_WORLD, &id); /* Get id of this process */
+		printf("INFO:  de36.c - SIGINTproc -- Ctrl-C has been pressed. Be patient while all running simulations end. Exiting...  PID=%d\n",id);
 		sleep(1);
 		MPI_EXXIT=1;
 	}
 	#else
-	/* printf("INFO:  de36.c - sigproc -- Ctrl-C has been pressed.\n"); */
+	printf("INFO:  de36.c - SIGINTproc -- Ctrl-C has been pressed.\n");
 	sleep(1);
 	#endif
 }
 
-void quitproc(int sig)
+void SIGQUITproc(int sig) /* kill -s QUIT <pid> */
 {
-	printf("ctrl-\\ pressed to quit\n");
-	/* exit(0); */ /* normal exit status */
+	printf("INFO:  de36.c - SIGQUITproc -- ctrl-\\ pressed to quit\n");
 }

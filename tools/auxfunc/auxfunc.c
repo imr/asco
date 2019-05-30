@@ -5,9 +5,9 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * Original version converted from "Turbo PASCAL" to C using "p2c"
- * 
- * 
- * 
+ *
+ *
+ *
  * Credit is given here to the author of the translation program
  *
  * "p2c"  Copyright 1989, 1990, 1991  Free Software Foundation, Inc.
@@ -16,7 +16,7 @@
  *                              256-80 Caltech
  *                              Pasadena CA 91125
  *                              daveg@csvax.cs.caltech.edu, cit-vax!daveg
- * 
+ *
  * The GNU License Agreement restrictions do _not_ apply to code generated
  * by p2c, nor to the p2c run-time files "p2clib.c" and "p2c.h".
  */
@@ -26,6 +26,8 @@
 /*BEGIN*/
 /*Run-time library for use with "p2c", the Pascal to C translator*/
 #include <stdio.h>
+/* #include <ctype.h> */
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -118,6 +120,21 @@ int strpos2(char *s, register char *pat, register int pos)
 
 
 /*
+ * Compares two floating point numbers to a given precision.
+ * Returns '1'  if they equal and '0' otherwise.
+ */
+int fcmp(double a, double b)
+{
+	if (fabs(a-b) < 1e-50) /*Accuracy is 1e-50*/
+		return 1;
+	else
+		return 0;
+}
+
+
+
+
+/*
  * Reads one line from the "stream" and properly finishes it with NULL character
  */
 void fgets2(char *s, int n, FILE *stream)
@@ -158,6 +175,9 @@ int inlinestrpos(char *s)
 			break;
 		case 4: /*Spectre*/
 			k = strpos2(s, "//", 1);
+			break;
+		case 50: /*Qucs*/
+			k = 0;
 			break;
 		case 100: /*general*/
 			k = 0;

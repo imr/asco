@@ -1,0 +1,12 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Pass Band Ripple
+Note:
+#
+
+# Commands #
+.MEASURE AC #SYMBOL# min S21(db) from=960e6 to=1040e6
+#

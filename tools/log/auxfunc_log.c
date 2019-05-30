@@ -80,17 +80,17 @@ void WriteStats(int num_measures, int data_lines, statistics stats, FILE **fOut)
 void SimpleParametersCategory(int num_measures, char *llog, statistics stats, FILE **fOut)
 {
 	int i, j;
-	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
+	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE], lkk3[LONGSTRINGSIZE];
 
-	fprintf(*fOut, "\n\n");
 	llog[0]=58; /* ':' */
 	j=1;
 	for (i = 1; i <= (num_measures); i=i+2) {
 		ReadSubKey(lkk1, llog, &j, ':', ':', 0);
 		StripSpaces(lkk1);
-		sprintf(lkk2, "%s:#%s#:%E:%E:%E:LIN_DOUBLE:OPT", lkk1, lkk1, (stats.max[i]+stats.min[i])/2, stats.min[i], stats.max[i]);
-		fprintf(*fOut, "%s\n", lkk2);
-		ReadSubKey(lkk1, llog, &j, ':', ':', 0);
+		ReadSubKey(lkk2, llog, &j, ':', ':', 0);
+		StripSpaces(lkk2);
+		sprintf(lkk3, "%s:#%s#:%s:%E:%E:LIN_DOUBLE:OPT", lkk1, lkk1, lkk2, stats.min[i], stats.max[i]);
+		fprintf(*fOut, "%s\n", lkk3);
 	}
 }
 
@@ -105,28 +105,34 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 	int i, j;
 	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
 
-		fprintf(*fOut, "\n\n");
 		fgets2(lkk, LONGSTRINGSIZE, *fcfg);
 		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(*fcfg))) {
 			i=strpos2(lkk, ":OPT", 1);
+			if (lkk[0]=='*') /*if the line is comment out, simply ignore it*/
+				i=0;
 			if (i) { /* line with OPT */
 				j=1;
 				ReadSubKey(lkk1, lkk, &j, '#', '#', 5); /* lkk1=symbol */
 				lkk2[0]='\0';
 				i=0;
 				j=1;
-				while (strcmp (lkk1, lkk2)) {
+				while ( (strcmp (lkk1, lkk2)) && (j<strlen(llog) ) ) {
 					i++;
 					ReadSubKey(lkk2, llog, &j, ':', ':', 0);
 					StripSpaces(lkk2);
 				}
-				i++; /*the correct possition of the value*/
+				if (j==strlen(llog)) {
+					printf("auxfunc_log.c - ComplexParametersCategory -- Wrong config opened.\n");
+					exit(EXIT_FAILURE);
+				}
+				ReadSubKey(lkk2, llog, &j, ':', ':', 0); /*the measured value for the previously text*/
+				i++; /*the correct position of the value*/
 				j=1;
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
-				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
 				strsub(lkk1, lkk, 1, j);
-				sprintf(lkk2, "%E:%E", stats.min[i], stats.max[i]);
+				sprintf(lkk2, "%s:%E:%E", lkk2, stats.min[i], stats.max[i]);
 				strcat(lkk1, lkk2);
+				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				strsub(lkk2, lkk, j, (int)strlen(lkk));
@@ -149,7 +155,7 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 void CreateStatistics(char *InputFile, char *OutputFile)
 {
 	int i, j, k;
-	char lkk1[LONGSTRINGSIZE];
+	char lkk1[LONGSTRINGSIZE], llog[LONGSTRINGSIZE];
 	statistics stats;
 	FILE *fIn, *fOut, *fcfg;
 	double aux;
@@ -176,7 +182,9 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 	}
 
 	fgets2(lkk, LONGSTRINGSIZE, fIn);
-	strsub(lkk1, lkk, 1, strpos2(lkk, ";", 1)-1);
+	if (P_eof(fIn)) /*if there is only 1 line*/
+		fseek(fIn, 0, SEEK_SET);
+	strsub(lkk1, lkk, 1, strpos2(lkk, ":", 1)-1);
 
 	i=0; j=1; k=0;
 	while (!P_eof(fIn)) {
@@ -202,7 +210,6 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 
 	WriteStats(num_measures-1, k, stats, &fOut);
 
-
 	/* -- */
 	dd_ffblk fb;
 	char *mask="*.cfg";
@@ -210,9 +217,8 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 		printf("Opening config file: %s\n", fb.dd_name);
 	/* -- */
 
-
+	fprintf(fOut, "\n\n# Parameters #\n");
 /*--------*/
-	char llog[LONGSTRINGSIZE];
 	strcpy(llog,lkk); /*last line from log file*/
 
 	fcfg=NULL;
@@ -232,7 +238,7 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 		}
 	}
 /*--------*/
-
+	fprintf(fOut, "#\n");
 
 	if (fOut != NULL)
 		fclose(fOut);

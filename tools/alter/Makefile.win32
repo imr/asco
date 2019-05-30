@@ -1,0 +1,15 @@
+#
+CC = gcc
+CFLAGS = -Os
+
+
+#
+all: ../auxfunc/auxfunc.o auxfunc_alter.o alter
+
+alter:
+	$(CC) $(CFLAGS) -o alter.exe ../auxfunc/auxfunc.o auxfunc_alter.o alter.c -lm
+	strip alter.exe
+
+clean::
+	rm -f *.o
+	rm alter.exe

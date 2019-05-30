@@ -68,7 +68,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 	small = FALSE;
 
 	ReadParameter(lkk, laux, "l=", l_string, &l_value, &j);
-	if ((l_value <= mosfet.small_length) && (l_value!=0)) {
+	if ((l_value <= mosfet.small_length) && (!fcmp(l_value, 0))) {
 		small = TRUE;
 		printf("small_1_=%s\n", laux);
 	}
@@ -107,7 +107,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 		strcpy(m_string, "1");
 	}
 	else {
-		if (m_value!=0) { /*m was found and is not text*/
+		if (!fcmp(m_value, 0)) { /*m was found and is not text*/
 			m_value = m_value/1e6;
 			sprintf(m_string, "%0.2f", m_value);
 		}
@@ -118,7 +118,7 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 	j--;
 
 
-	if ((w_value==0) || (l_value==0) ||(m_value==0)) {
+	if (fcmp(w_value, 0) || fcmp(l_value, 0) ||fcmp(m_value, 0)) {
 		sprintf(DeltaBeta, "%0.4f/sqrt(%s*%s*%s)*%s/100", Abeta, w_string, l_string, m_string, w_string);
 		sprintf(DeltaVt,"%0.4f/sqrt(%s*%s*%s)", Avt, w_string, l_string,  m_string);
 		/*writes the Monte Carlo parameters*/
@@ -138,6 +138,10 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 				break;
 			case 4: /*Spectre*/
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Spectre\n");
+				exit(EXIT_FAILURE);
+				break;
+			case 50: /*Qucs*/
+				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Qucs\n");
 				exit(EXIT_FAILURE);
 				break;
 			case 100: /*general*/
@@ -184,7 +188,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 	double value, delta_abs;
 	char lkk1[LONGSTRINGSIZE];
 
-	if (delta == 0) {
+	if (fcmp(delta, 0)) {
 		fprintf(fout, "%s\n", lkk);
 		return;
 	}
@@ -221,7 +225,7 @@ void MCrlc(char device, double delta, char *lkk, int *ptr, FILE *fout)
 
 	value = asc2real(lkk1, 1, (int)strlen(lkk1)); /*not used anymore but can be used to print*/
 						 /*'delta' instead of 'ComponenteValue*Variation'*/
-	if (value==0) {
+	if (fcmp(value, 0)) {
 		fprintf(fout, ".param %c%d=AGAUSS(%s, %s*%f, 1)\n", device, *ptr, lkk1, lkk1, delta_abs);
 
 	} else {

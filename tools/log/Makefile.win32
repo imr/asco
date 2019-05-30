@@ -1,0 +1,15 @@
+#
+CC = gcc
+CFLAGS = -Os
+
+
+#
+all: dosdir.o match.o auxfunc.o auxfunc_log.o log
+
+log:
+	$(CC) $(CFLAGS) -o log.exe dosdir.o match.o auxfunc.o auxfunc_log.o log.c -lm
+	strip log.exe
+
+clean::
+	rm -f *.o
+	rm log.exe

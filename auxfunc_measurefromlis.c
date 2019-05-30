@@ -193,11 +193,11 @@ void DoMath(int num_measures)
 				/*Step1*/
 				k=0;
 				sprintf(STR1, "%.*s", (int)strlen(lkk1), lkk1);
-				l = (sscanf(STR1, "%i", &k) == 0);
+				l = (sscanf(STR1, "%i", &k) == 0); /*'l' is zero if a number is read*/
 				if (lkk1[0] == '&') { /*to read one measurement*/
 					l = (sscanf(strsub(STR1, lkk1, 2, (int)strlen(lkk1)), "%i", &k) == 0); /* &<digit> format else is */
 					if (k == 0) {
-						for (k = 1; k < i; k++) {                                 /* &<text>  format         */
+						for (k = 1; k < i; k++) {                                      /* &<text>  format         */
 							/*ll = 1;*/
 							if (strpos2(measure[k].var_name, STR1,1)) { /* if variable in STR1 exists in measure[k].var_name */
 								/*fflush(0);*/
@@ -207,8 +207,8 @@ void DoMath(int num_measures)
 					}
 					data = asc2real(measure[k].data, 1, (int)strlen(measure[k].data));
 				} else {
-					if (k != 0) /*to read one number*/
-						data = k;
+					if (l == 0) /*to read one number*/
+						data = asc2real(STR1, 1, (int)strlen(STR1));
 					else {      /*to read a mathematical operator*/
 						switch (lkk1[0]) {
 							case '+': /*plus*/
@@ -224,7 +224,7 @@ void DoMath(int num_measures)
 								break;
 
 							case '/': /*divide*/
-								if (RPN1 != 0)
+								if (!fcmp(RPN1, 0))
 									data = RPN2 / RPN1;
 								else {
 									printf("auxfunc_measurefromlis.c - DoMath -- MATH divided by zero => %s\n", measure[i - 1].search);
@@ -335,7 +335,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 				aux = asc2real(laux1, 1, (int)strlen(laux1));
 				j = extended2engineer(&aux);
 				/*debug*/
-				if ((aux!=0) ) { /* we are going to read a number */
+				if (!fcmp(aux,0)) { /* we are going to read a number */
 					sprintf(laux1, "%7.3f", aux);
 					sprintf(laux2, "%i", j);
 					sprintf(line + (int)strlen(line), "%se%s | ", laux1, laux2);
@@ -408,7 +408,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 			aux = asc2real(laux1, 1, (int)strlen(laux1));
 			j = extended2engineer(&aux);
 			/*debug*/
-			if ((aux!=0) ) { /*we are going to read a number*/
+			if (!fcmp(aux,0)) { /*we are going to read a number*/
 				sprintf(laux1, "%7.3f", aux);
 				sprintf(laux2, "%i", j);
 				fprintf(*fSummary, "%se%s | ", laux1, laux2);

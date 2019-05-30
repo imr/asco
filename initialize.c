@@ -35,8 +35,15 @@
 double scaleto(double value, double ina, double inb, double outa, double outb, int format)
 {
 	double result;
-	int ii;
 
+	if (fcmp(inb, ina)) {
+		printf("initialize.c - scaleto -- 'ina' and 'inb' cannot be equal!\n");
+		exit(EXIT_FAILURE);
+	}
+	if (fcmp(outb, outa)) {
+		printf("initialize.c - scaleto -- 'outa' and 'outb' cannot be equal!\n");
+		exit(EXIT_FAILURE);
+	}
 	switch (format) {
 		case 1: /*LIN_DOUBLE*/
 			result = ( (outb-outa)*value/(inb-ina)  +  (outa*inb - ina*outb)/(inb-ina) );
@@ -45,9 +52,9 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 		case 2: /*LIN_INT*/
 			outa=floor(outa); /*Convert to INTEGER, just in case*/
 			outb=ceil(outb);  /*Convert to INTEGER, just in case*/
-			outb++;
+			/* outb++; */
 			result = ( (outb-outa)*value/(inb-ina)  +  (outa*inb - ina*outb)/(inb-ina) );
-			result = floor(result); /*Convert final result to INTEGER*/
+			result = rint(result); /*Convert final result to INTEGER*/
 			break;
 
 		case 3: /*LOG_DOUBLE*/
@@ -63,9 +70,17 @@ double scaleto(double value, double ina, double inb, double outa, double outb, i
 			exit(EXIT_FAILURE);
 	}
 
-	if (result<0) {
-		ii=1;
-		/*printf("errfunc.c - scaleto -- Error: negative values\n");*/
+	if (result < outa) {
+		printf("initialize.c - scaleto -- Initial value in *.cfg is lower than the minimum value. Double check!\n");
+		#ifndef DEBUG
+		exit(EXIT_FAILURE);
+		#endif
+	}
+	if (result > outb) {
+		printf("initialize.c - scaleto -- Initial value in *.cfg is larger than the maximum value. Double check!\n");
+		#ifndef DEBUG
+		exit(EXIT_FAILURE);
+		#endif
 	}
 
 	return(result);
@@ -143,7 +158,7 @@ void DecodeSymbolNode(char *ret, int i)
 	while (ii<=(int)strlen(ret)) {
 		Str2Lower(laux);
 		if (!strcmp(laux, "symbol"))
-			ii=ii+1000;                   /*is a "symbol" and encode this information by adding '1000'*/
+			ii=ii+1000;                   /*it is a "symbol" and encode this information by adding '1000'*/
 		else {
 			if (strcmp(laux, "node")) {   /*if it is not "node" then exit*/
 				printf("initialize.c - DecodeSymbolNode -- Unrecognized option: %s\n", laux);
@@ -341,10 +356,8 @@ int initialize(char *filename) /* , double *x) */
 						parameters[i].minimum=parameters[i].value;  /*furthermore, if it is just to define a quantity */
 						parameters[i].maximum=parameters[i].value;  /*then make minimum=maximum=value                 */
 					} else {
-						if (strcmp(laux, "node")) {                /*if it is not "node" then exit                    */
-							printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
-							exit(EXIT_FAILURE);
-						}
+						printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
+						exit(EXIT_FAILURE);
 					}
 				}
 
@@ -496,19 +509,19 @@ int initialize(char *filename) /* , double *x) */
 	switch(spice) {
 		case 1: /*Eldo*/
 			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
-				printf("initialize.c - Step4.1 -- End not found in <inputfile>.*\n");
+				printf("initialize.c - Step4.1 -- End not found in %s.cir\n", filename);
 				exit(EXIT_FAILURE);
 			}
 			break;
 		case 2: /*HSPICE*/
 			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
-				printf("initialize.c - Step4.1 -- End not found in <inputfile>.*\n");
+				printf("initialize.c - Step4.1 -- End not found in %s.sp\n", filename);
 				exit(EXIT_FAILURE);
 			}
 			break;
 		case 3: /*LTspice*/
 			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
-				printf("initialize.c - Step4.1 -- End not found in <inputfile>.*\n");
+				printf("initialize.c - Step4.1 -- End not found in %s.net\n", filename);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -716,7 +729,11 @@ int initialize(char *filename) /* , double *x) */
 		} else {                                                          /*a line with "MEASURE_VAR" exist in "/extract/<file>"*/
 			while (!strcmp((sprintf(laux, "%.11s", lkk), laux), "MEASURE_VAR")) {
 				DecodeSymbolNode(lkk, i);
+				#ifndef __MINGW32__
 				ii=ProcessMeasureVar(lkk, ii, "/dev/null");
+				#else
+				ii=ProcessMeasureVar(lkk, ii, "NUL");
+				#endif
 				ii++;
 				ReadKey(lkk, "MEASURE_VAR", fextract);
 			}

@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 {
 	int ii, ccode;
 	char hostname[SHORTSTRINGSIZE];
-	#ifdef MPI /*If in parallel optimization mode, copy all files to /tmp/asco */
+	#ifdef MPI
 	int id, ntasks, err;
 	int pid=0;
 	char currentdir[LONGSTRINGSIZE], optimizedir[LONGSTRINGSIZE];
@@ -121,9 +121,16 @@ int main(int argc, char *argv[])
 
 	strcpy(lkk, argv[2]);
 	ii=strpos2(lkk, "/", 1);
+	#ifdef __MINGW32__
+	if (ii==0) ii=strpos2(lkk, "\\", 1);
+	#endif
 	if (ii) {           /*should character '/' exist, files are in a different directory*/
 		ii=strlen(lkk);
+		#ifndef __MINGW32__
 		while (lkk[ii--] != 47) {} /* 47="/" */
+		#else
+		while (lkk[ii] != '/' && lkk[ii] != '\\') {ii--;} /* 47="/" */
+		#endif
 		ii++;
 
 		lkk[ii+1]='\0';
@@ -154,7 +161,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'l': /*LTspice*/
-			if (!strcmp(argv[1], "LTspice")) {
+			if (!strcmp(argv[1], "ltspice")) {
 				spice=3;
 				printf("INFO:  LTspice initialization on '%s'\n", hostname);
 				fflush(stdout);
@@ -195,10 +202,17 @@ int main(int argc, char *argv[])
 		sprintf(optimizedir, "/tmp/asco%d", pid); /*allows multiple runs on the same computer name*/
 		/*sprintf(optimizedir, "/tmp/asco"); */        /*alow one run on each computer*/
 
+		#ifndef __MINGW32__
 		sprintf(lkk, "mkdir %s > /dev/null", optimizedir);
 		system(lkk);
 		sprintf(lkk, "cp -rfp * %s> /dev/null", optimizedir);
 		system(lkk);
+		#else
+		sprintf(lkk, "mkdir %s > NUL", optimizedir);
+		system(lkk);
+		sprintf(lkk, "xcopy * %s /e /k /r /y > NUL", optimizedir);
+		system(lkk);
+		#endif
 
 		chdir(optimizedir);
 	}
@@ -207,7 +221,7 @@ int main(int argc, char *argv[])
 	if (spice) {
 		if (initialize(argv[2]))
 			exit(EXIT_FAILURE);
-		printf("INFO:  Initialization has fineshed without errors on '%s'\n", hostname);
+		printf("INFO:  Initialization has finished without errors on '%s'\n", hostname);
 		fflush(stdout);
 	} else {
 		printf("asco.c -- Unsupport SPICE simulator: %s\n", argv[1]);
@@ -240,6 +254,52 @@ int main(int argc, char *argv[])
 		printf("\n\nINFO:  Starting global optimizer on '%s'...\n", hostname);
 		fflush(stdout);
 		#endif
+		/* -------------------------------------- */
+		if (1) { /*emulate local search using the global optimizer when (maximum=minimum) and format!=0*/
+			ii=0;
+			ccode=0; /*'ccode' behaves like a boolean variable*/
+			while (parameters[ii].format != 0) {
+				if ( fcmp(parameters[ii].maximum, parameters[ii].minimum)) { /*This is, if they are equal*/
+					if (fcmp(parameters[ii].value, 0) ) { /*This is, if equal to zero*/
+						printf("asco.c - Value is zero when using DE in emulated local mode.");
+						exit(EXIT_FAILURE);
+					}
+					if ((parameters[ii].value) > 0) {
+						parameters[ii].maximum=1.1*parameters[ii].value;
+						parameters[ii].minimum=0.9*parameters[ii].value;
+						#ifdef MPI
+						if ((ccode==0) & (id==0)) { /*Only the Master will print*/
+						#else
+						if (ccode==0) {
+						#endif
+							printf("       ...using local-global optimizer for: ");
+							fflush(stdout);
+							ccode++;
+						}
+						printf("%s ", parameters[ii].name);
+						fflush(stdout);
+					} else {
+						parameters[ii].maximum=0.9*parameters[ii].value;
+						parameters[ii].minimum=1.1*parameters[ii].value;
+						#ifdef MPI
+						if ((ccode==0) & (id==0)) { /*Only the Master will print*/
+						#else
+						if (ccode==0) {
+						#endif
+							printf("       ...using local-global optimizer for: ");
+							fflush(stdout);
+							ccode++;
+						}
+						printf("%s ", parameters[ii].name);
+						fflush(stdout);
+					}
+				}
+				ii++;
+			}
+			if (ccode)
+				printf("\n");
+		}
+		/* -------------------------------------- */
 		DE(argc, argv); /*Rainer Storn and Ken Price Differential Evolution (DE)*/
 		/* Wobj=10; Wcon=100; */
 		/* opt(argc, argv); */ /*Tibor Csendes: GLOBAL*/
@@ -269,19 +329,35 @@ int main(int argc, char *argv[])
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 2: /*HSPICE*/
+				#ifndef __MINGW32__
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
+				#else
+				sprintf(lkk, "copy /y %s.log %s/%s_%d.log > NUL", hostname, currentdir, hostname, pid);
+				#endif
 				break;
 			case 3: /*LTspice*/
+				#ifndef __MINGW32__
 				sprintf(lkk, "cp -fp %s.log.log %s/%s_%d.log.log > /dev/null", hostname, currentdir, hostname, pid);
+				#else
+				sprintf(lkk, "copy /y %s.log.log %s/%s_%d.log.log > NUL", hostname, currentdir, hostname, pid);
+				#endif
 				break;
 			case 4: /*Spectre*/
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 50: /*Qucs*/
+				#ifndef __MINGW32__
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
+				#else
+				sprintf(lkk, "copy /y %s.log %s/%s_%d.log > NUL", hostname, currentdir, hostname, pid);
+				#endif
 				break;
 			case 100: /*general*/
+				#ifndef __MINGW32__
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
+				#else
+				sprintf(lkk, "copy /y %s.log %s/%s_%d.log > NUL", hostname, currentdir, hostname, pid);
+				#endif
 				break;
 			default:
 				printf("errfunc.c -- Something unexpected has happened!\n");
@@ -289,7 +365,11 @@ int main(int argc, char *argv[])
 		}
 		system(lkk); /*copy log files*/
 
+		#ifndef __MINGW32__
 		sprintf(lkk, "rm -rf /tmp/asco%d", pid);
+		#else
+		sprintf(lkk, "rmdir /q /s /tmp/asco%d", pid);
+		#endif
 		system(lkk); /*delete ALL temporary optimization data written to /tmp/asco<PID> */
 
 		/* chdir(currentdir); */
@@ -304,12 +384,21 @@ int main(int argc, char *argv[])
 	#else
 	{
 	#endif
+		#ifndef __MINGW32__
 		if ((spice==50) && (argc==5) ) { /*Qucs*/
 			sprintf(lkk, "cp -fp %s.dat %s.dat > /dev/null", hostname, argv[4]);
 			system(lkk); /*copy simulation output file*/
 			sprintf(lkk, "cp -fp %s.log %s.log > /dev/null", hostname, argv[4]);
 			system(lkk); /*copy log file*/
 		}
+		#else
+		if ((spice==50) && (argc==5) ) { /*Qucs*/
+			sprintf(lkk, "copy /y %s.dat %s.dat > NUL", hostname, argv[4]);
+			system(lkk); /*copy simulation output file*/
+			sprintf(lkk, "copy /y %s.log %s.log > NUL", hostname, argv[4]);
+			system(lkk); /*copy log file*/
+		}
+		#endif
 	}
 
 

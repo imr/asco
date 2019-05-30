@@ -1,0 +1,12 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Right Side Lobe
+Note:
+#
+
+# Commands #
+.EXTRACT AC LABEL=#SYMBOL# MAX(SDB(2,1), 1100e6, 1200e6)
+#

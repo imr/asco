@@ -1,0 +1,12 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Pass Band Riple
+Note:
+#
+
+# Commands #
+//export real #SYMBOL#=
+#

@@ -1,3 +1,15 @@
+ASCO 0.4.5: October 8, 2006
+   * Retouched load balancer
+   * Emulation of local optimization using the parallel DE optimizer
+   * More patches to compile with MinGW32
+   * Minor enhancements
+
+   Manual:
+   *
+
+
+
+
 ASCO 0.4.4: August 30, 2006
    * Dynamic load balancing in parallel differential evolution (DE) algorithm
    * More patches to compile nativley in win32 using MinGW32

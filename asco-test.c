@@ -80,11 +80,23 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	/* printf("host name: %s\n", hostname); */
+	ii=strpos2(hostname, ".", 1);
+	if (ii)                                 /* hostname is "longmorn.xx.xx.xx" */
+		hostname[ii-1]='\0';
+	/*                                   */ /* hostname is "longmorn" */
+
 	strcpy(lkk, argv[2]);
 	ii=strpos2(lkk, "/", 1);
+	#ifdef __MINGW32__
+	if (ii==0) ii=strpos2(lkk, "\\", 1);
+	#endif
 	if (ii) {           /*should character '/' exist, files are in a different directory*/
 		ii=strlen(lkk);
+		#ifndef __MINGW32__
 		while (lkk[ii--] != 47) {} /* 47="/" */
+		#else
+		while (lkk[ii] != '/' && lkk[ii] != '\\') {ii--;} /* 47="/" */
+		#endif
 		ii++;
 
 		lkk[ii+1]='\0';
@@ -150,7 +162,7 @@ int main(int argc, char *argv[])
 	if (spice) {
 		if (initialize(argv[2]))
 			exit(EXIT_FAILURE);
-		printf("INFO:  Initialization has fineshed without errors\n");
+		printf("INFO:  Initialization has finished without errors\n");
 		fflush(stdout);
 	} else {
 		printf("asco-test.c -- Unsupport SPICE simulator: %s\n", argv[1]);

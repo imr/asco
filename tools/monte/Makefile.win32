@@ -1,0 +1,15 @@
+#
+CC = gcc
+CFLAGS = -Os
+
+
+#
+all: ../auxfunc/auxfunc.o auxfunc_monte.o monte
+
+monte:
+	$(CC) $(CFLAGS) -o monte.exe ../auxfunc/auxfunc.o auxfunc_monte.o monte.c -lm
+	strip monte.exe
+
+clean::
+	rm -f *.o
+	rm monte.exe

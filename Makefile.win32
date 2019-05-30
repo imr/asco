@@ -1,36 +1,36 @@
 #
 CC = gcc
 CC_MPI = <FULL_PATH_TO_MPICH>/bin/mpicc
-CFLAGS = -Os -I. -I/usr/include
+CFLAGS = -Os
 
 
 #
 all: asco asco-test alter log monte postp
 
 asco-test:
-	$(CC) $(CFLAGS) -DDEBUG  -DASCO -lm -o asco-test auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c asco-test.c -lws2_32
+	$(CC) $(CFLAGS) -DDEBUG -DASCO -o asco-test.exe auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c asco-test.c -lm -lws2_32
 
 asco:
-	$(CC) $(CFLAGS) -DASCO -lm -o asco auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c hooke.c nmlatest.c asco.c -lws2_32
+	$(CC) $(CFLAGS) -DASCO -o asco.exe auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c hooke.c nmlatest.c asco.c -lm -lws2_32
 
 asco-mpi:
-	$(CC_MPI) $(CFLAGS) -DASCO -DMPI -lm -o asco-mpi auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c hooke.c nmlatest.c asco.c -lws2_32
+	$(CC_MPI) $(CFLAGS) -DASCO -DMPI -o asco-mpi.exe auxfunc.c auxfunc_alter.c auxfunc_monte.c auxfunc_measurefromlis.c rfmodule.c initialize.c errfunc.c evaluate.c de36.c hooke.c nmlatest.c asco.c -lm -lws2_32
 
 alter::
-	make -C tools/alter/
+	make -C tools/alter/ -f Makefile.win32
 
 log::
-	make -C  tools/log/
+	make -C tools/log/ -f Makefile.win32
 
 monte::
-	make -C  tools/monte/
+	make -C tools/monte/ -f Makefile.win32
 
 postp::
-	make -C  tools/postp/
+	make -C tools/postp/ -f Makefile.win32
 
 clean::
-	rm -f asco asco-test asco.exe asco-test.exe
-	rm -f tools/alter/alter tools/alter/alter.exe
-	rm -f tools/log/log tools/log/log.exe
-	rm -f tools/monte/monte tools/monte/monte.exe
-	rm -f tools/postp/postp tools/postp/postp.exe
+	rm -f asco.exe asco-test.exe
+	rm -f tols/alter/alter.exe
+	rm -f tools/log/log.exe
+	rm -f tools/monte/monte.exe
+	rm -f tools/postp/postp.exe

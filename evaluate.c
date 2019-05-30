@@ -59,7 +59,7 @@ double evaluate(int D, double x[], char *filename)
 			cost=cost+9e99*(x[ii]-10);
 		}
 	}
-	if (cost)
+	if (!fcmp(cost, 0))
 		return(cost);
 	#endif
 

@@ -1,0 +1,18 @@
+# Info #
+Name:AMP3 Slew rate
+Symbol:ZSR
+Unit:V/s
+Analysis type:AC
+Definition:SR_CALC = GBW*pi*(VGS-VT)
+Note:
+#
+
+# Commands #
+#
+
+# Post Processing #
+MEASURE_VAR:   UGF: SEARCH_FOR:'ugf='
+MEASURE_VAR:   Vgs: SEARCH_FOR:'m:opamp:11': S_COL:46: P_LINE:03: P_COL:46:56
+MEASURE_VAR:   Vth: SEARCH_FOR:'m:opamp:11': S_COL:46: P_LINE:06: P_COL:46:56
+MEASURE_VAR:   #SYMBOL#: MATH: &Vgs: &Vth: -: +3.1415926: *: &UGF: *: abs
+#

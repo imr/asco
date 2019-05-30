@@ -722,19 +722,14 @@ int RFModule(char *line, int optimize, FILE* fout)
 					ReadSubKey(x0_string, rf[i].line[prev], &k, '=', ' ', 5);
 					x0_value=asc2real(x0_string, 1, (int)strlen(x0_string));
 				}
-/*
-#define FLOAT_EQ(x, v, epsilon)   (((v - epsilon) < x) && (x < (v + epsilon)))
-if (FLOAT_EQ(x0_value, x_value, 1e-020))
-	prev++;
-*/
-				if (x0_value == x_value) /* Special case when (x0_value = x_value), meaning */
-					prev++;          /* that it is equal to one of table extremes       */
-				/* if (prev==0) { */           /* The following code exist due to numerical error defining how close x0_value == x_value */
-				/*	if ((x0_value - x_value) < 1e-20) { */
-				/*		prev++;  */         /* that it is equal to one of table extremes  */
-				/*		x_value=x0_value; */
-				/*	} */
-				/*} */
+				if (fcmp(x0_value, x_value)) /* Special case when (x0_value = x_value), meaning */
+					prev++;              /* that it is equal to one of table extremes       */
+				if (prev==0) { /* The following code exist due to numerical error defining how close x0_value == x_value */
+					if (strpos2(line, x_string, 1)) {
+						prev++;
+						x_value=x0_value;
+					}
+				}
 				if (prev==0) { /*validation*/
 					printf("rfmodule.c - RFModule -- Value (%s) is lower than the first value in table: %s\n", x_string, line);
 					exit(EXIT_FAILURE);
@@ -781,7 +776,7 @@ if (FLOAT_EQ(x0_value, x_value, 1e-020))
 				y1_value=asc2real(y1_string, 1, (int)strlen(y1_string));
 
 				/* Linar Interpolation */
-				if (x0_value == x_value)
+				if (fcmp(x0_value, x_value))
 					y_value=y0_value;
 				else
 					y_value= y0_value + ( (x_value-x0_value)/(x1_value-x0_value) )*(y1_value-y0_value);
