@@ -15,9 +15,10 @@
 /* #include <assert.h> */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <signal.h>
-#include <wait.h>
+#include <sys/wait.h>
 
 
 #include "auxfunc.h"
@@ -170,6 +171,7 @@ double CostFunction()
 	}
 	if ((cost<1e-20) && (spice<100)) { /* In SPICE, it is very unlikely that the cost is anywhere close to 0 */
 		printf("INFO:  errfunc.c - CostFunction -- Cost is very close to zero, probably due to an error.\n");
+		fflush(stdout);
 	}
 	return (cost);
 }
@@ -494,19 +496,19 @@ double errfunc(char *filename, double *x)
 	#endif
 	switch(spice) {
 		case 1: /*Eldo*/
-			sprintf(lkk, "eldo -noconf -i %s.cir > %s.out", hostname, hostname);
+			sprintf(lkk, "nice -n 19 eldo -noconf -i %s.cir > %s.out", hostname, hostname);
 			break;
 		case 2: /*HSPICE*/
-			sprintf(lkk, "hspice -i %s.sp -o %s.lis > /dev/null", hostname, hostname);
+			sprintf(lkk, "nice -n 19 hspice -i %s.sp -o %s.lis > /dev/null", hostname, hostname);
 			break;
 		case 3: /*LTSpice*/
-			sprintf(lkk, "ltspice -b %s.net > /dev/null", hostname);
+			sprintf(lkk, "nice -n 19 ltspice -b %s.net > /dev/null", hostname);
 			break;
 		case 4: /*Spectre*/
-			sprintf(lkk, "spectremdl -batch %s.mdl -design %s.scs > /dev/null", hostname, hostname);
+			sprintf(lkk, "nice -n 19 spectremdl -batch %s.mdl -design %s.scs > /dev/null", hostname, hostname);
 			break;
 		case 100: /*general*/
-			sprintf(lkk, "./general.sh %s %s", hostname, hostname);
+			sprintf(lkk, "nice -n 19 ./general.sh %s %s", hostname, hostname);
 			break;
 		default:
 			printf("errfunc.c - Step3 -- Something unexpected has happened!\n");
@@ -515,7 +517,11 @@ double errfunc(char *filename, double *x)
 	ii=system(lkk);
 	if (WIFSIGNALED(ii) && (WTERMSIG(ii) == SIGINT || WTERMSIG(ii) == SIGQUIT)) {
 		printf("errfunc.c - Step3 -- Ctrl-C key pressed. Exiting optimization loop.\n");
+		#ifdef MPI
 		exit(EXIT_FAILURE);
+		#else
+		return(0); /*returned simulation cost is zero; Ctrl-C detection*/
+		#endif
 	}
 
 
@@ -576,12 +582,13 @@ double errfunc(char *filename, double *x)
 	#ifdef DEBUG
 	printf("DEBUG: errfunc.c - Step7\n");
 	#endif
-	if ( ((AllConstraintsMet()) || (AlterMCcost > maxcost)) && (AlterMC)) {
+	if ( (((AllConstraintsMet()) && (AlterMCcost > maxcost)) || (AlterMCcost > maxcost)) && (AlterMC)) {
 
 		switch (AlterMC) {
 			case 1: /*Monte Carlo simulation*/
 				/* bla bla bla*/
 				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
+				fflush(stdout);
 
 				if (LOG) {
 					sprintf(laux, "%s.log", hostname);
@@ -627,6 +634,7 @@ strcpy (filename_x, filename);
 			case 3: /*Alter simulation - variable 'AlterMC'=3 and will execute a MonteCarlo simulation afterwards*/
 				/* bla bla bla*/
 				printf("INFO:  errfunc.c - Step7 -- altermc=%d\n", AlterMC);
+				fflush(stdout);
 
 				if (LOG) {
 					sprintf(laux, "%s.log", hostname);

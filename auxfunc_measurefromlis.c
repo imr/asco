@@ -8,13 +8,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <math.h>
 
 #include "auxfunc_measurefromlis.h"
 #include "auxfunc.h"
 
 
-/* void WriteToMem(int num_measures){} */
+#ifdef ASCO
+extern void WriteToMem(int num_measures);
+#else
+void WriteToMem(int num_measures){}
+#endif
 
 /***************************************************************/
 /*MeasureFromLIS ***********************************************/

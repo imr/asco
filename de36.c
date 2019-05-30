@@ -77,6 +77,8 @@
 **                                                                  **
 ***H*O*C*E***********************************************************/
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 
 
 #include "de.h"
@@ -84,6 +86,7 @@
 #include "initialize.h"
 #ifdef MPI
 #include "mpi.h"
+#define MPI_METHOD 2 /*1:Send or 2:Scatter*/
 #endif
 
 /*------------------------Macros----------------------------------------*/
@@ -104,7 +107,9 @@ double (*pold)[MAXPOP][MAXDIM], (*pnew)[MAXPOP][MAXDIM], (*pswap)[MAXPOP][MAXDIM
 
 void  assignd(int D, double a[], double b[]);
 double rnd_uni(long *idum);    /* uniform pseudo random number generator */
-double extern evaluate(int D, double tmp[], char *filename); /* obj. funct. */
+extern double evaluate(int D, double tmp[], char *filename); /* obj. funct. */
+void sigproc(int);
+void quitproc(int);
 
 /*---------Function definitions-----------------------------------------*/
 
@@ -259,15 +264,29 @@ int DE(int argc, char *argv[])
    FILE  *fpin_ptr;
    FILE  *fpout_ptr;
 
+   char laux[LONGSTRINGSIZE];
+   int ii;
+
 /*------Initializations----------------------------*/
+	#ifdef MPI
+	signal(SIGINT, SIG_DFL);   /* Ctrl-C detection*/
+	signal(SIGQUIT, quitproc); /* Ctrl-\ detection*/
+	#else
+	signal(SIGINT, sigproc);   /* Ctrl-C detection*/
+	signal(SIGQUIT, quitproc); /* Ctrl-\ detection*/
+	#endif
 
 /*mpi: MPI initialization*/
 	#ifdef MPI
-	int m;
+	double tmp_y[MAXPOP][MAXDIM], trial_cost_y[MAXPOP];
+	int k, m, count;
 	const int tag = 42;	        /* Message tag */
+	const int root = 0;         /* Root process in scatter */
 	MPI_Status status;
+	MPI_Request send_req, recv_req;    /* Request object for send and receive */
 	int id, ntasks, source_id, dest_id, err;
-	double cost_mpi; /* cost of each one of the slave evaluations */
+	double cost_mpi; /* Message array */
+	int sendcount[MAXPOP], displs[MAXPOP];      /* Arrays for sendcounts and displacements */
 
 	err = MPI_Comm_size(MPI_COMM_WORLD, &ntasks); /* Get nr of tasks */
 	err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
@@ -278,14 +297,15 @@ int DE(int argc, char *argv[])
 	}
 
 
+
 	m=ntasks-1;  /*number of slave machines*/
 	#endif
 /*mpi: MPI initialization*/
 
 
 /*-----Read input data------------------------------------------------*/
-char laux[LONGSTRINGSIZE];
-int ii;
+
+
 
 sprintf(laux, "%s%s", argv[2], ".cfg");
 
@@ -366,41 +386,82 @@ Wcon=asc2real(laux, 1, (int)strlen(laux));    /*---weights for the cost due to t
 
 fclose(fpin_ptr);
 
+	#ifdef MPI
+	if (ntasks > (NP+1)) {
+		printf("You cannot use more than %d slave processes\n", NP);
+		MPI_Finalize(); /* Quit if there is only one processor */
+		exit(0);
+	}
+
+	if (MPI_METHOD==2) { /* Method 2: Master and Slave */
+		/* Initialize sendcount and displacements arrays */
+
+		/* Fills 'sendcount'*/
+		j=NP%m;                    /* remainder */
+		sendcount[0]=0; /* master does not perform calculations, so it receives 0 vectors */
+		for (i=1; i<ntasks; i++) {
+			sendcount[i]=NP/m; /* division */
+			if (j) {
+				sendcount[i]++;
+				j--;
+			}
+		}
+		/*Verification*/
+		j=0;
+		for (i=0; i<ntasks; i++) {
+			j=j+sendcount[i];
+		}
+		if (j!=NP) { /* Just to rest assured that no error has been done */
+			printf("de36.c - j!=NP\n");
+			exit(EXIT_FAILURE);
+		}
+		for (i=0; i<ntasks; i++) {
+			sendcount[i]=sendcount[i]*MAXDIM;
+		}
+
+		/*Fills 'displs'*/
+		displs[0]=0; /* master */
+		displs[1]=0; /* slave number 1 */
+		for (i=2; i<ntasks; i++) {
+			displs[i]=sendcount[i-1] + displs[i-1];
+		}
+	}
+	#endif
+
 /*mpi: slave code begins*/
 	#ifdef MPI
 	if (id) { /*If it is a slave process*/
-		while(1) {
+		while(MPI_METHOD==1) { /* Method 1: Slave */
 			i=0;
 			err = MPI_Recv(tmp[i], D, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status); /* Receive a message */
-			//err = MPI_Irecv(tmp, 2, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &recv_req);
-			//MPI_Wait(&recv_req, &status);
-			//source_id = status.MPI_SOURCE; /* Get id of sender */
-			//printf("Slave %d --- Received message %E %E from process %d\n", id, tmp[i][0], tmp[i][1], source_id);
-			//fflush(stdout);
 			if (tmp[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
-				//printf("Slave %d sleeping\n", id);
-				//fflush(stdout);
-				//sleep(4);
-				//printf("Slave %d exiting\n", id);
-				//fflush(stdout);
 				MPI_Finalize();
 				return (EXIT_SUCCESS);   /*exit*/
 			}
-			//sleep(1); /*Simulate performing calculations*/
 			cost_mpi = evaluate(D,tmp[0],argv[2]);  /* Evaluate new vector in tmp[] */
-			//printf("Slave %d --- Job done\n", id);
-			//fflush(stdout);
-			//cost_mpi = 10*tmp[i][0]; /* Put own identifier in the message */
 			dest_id = 0;            /* Destination address */
 			err = MPI_Send(&cost_mpi, 1, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
-			//err = MPI_Isend(tmp, 2, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
-			//MPI_Wait(&send_req, &status);
 		}
+		while(MPI_METHOD==2) { /* Method 2: Slave */
+			/* An unexpected error exist with some combinations of 'D' and the total *
+			 * total number of processes if recvcount (number of elements in receive *
+			 * buffer) is not large, instead of the expected value of 'NP*D'. Mainly *
+			 * due to low values of D.                                               */
 
-	/*Vectors have been received. Call simulation*/
-	/*Evaluate new vector in tmp[] */
-	/*Return cost to master process*/
-	/*Exit upon receiving end signal*/
+			/* Receive the scattered matrix from process 0, place it in array y */
+			err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			if (tmp_y[0][0]==1.7976931348623157e+308 /*DBL_MAX from <float.h>*/) { /*exit message*/
+				MPI_Finalize();
+				return (EXIT_SUCCESS);   /*exit*/
+			}
+
+			/*Calls optimization routine*/
+			for (i=0; i<sendcount[id]/MAXDIM; i++) {
+				trial_cost_y[i]=evaluate(D,tmp_y[i],argv[2]);  /* Evaluate new vector in tmp[] */
+			}
+
+			MPI_Send (&trial_cost_y, sendcount[id]/MAXDIM, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+		}
 	}
 	#endif
 /*mpi: slave code ends*/
@@ -506,40 +567,61 @@ fclose(fpin_ptr);
    for (i=0; i<NP; i++) /*mpi: */
    {
 	nfeval++;
-	cost[i] = evaluate(D,c[i],argv[2]); /* obj. funct. value */
+	if (NP)
+		cost[i] = evaluate(D,c[i],argv[2]); /* obj. funct. value */
+	if (cost[i]==0) { /*cost is zero ONLY if Ctrl-C has been pressed during call to simulator*/
+		NP=0;
+		genmax=0;
+		/* printf("INFO:  de36.c - Initialization.\n", NP); */
+		sleep(1);
+		/* printf("waking-up...\n"); */
+	}
    }
    #else /*mpi: Master code to call slave*/
-		//printf("NP=%d D=%d m=%d\n", NP, D, m);
+	if (MPI_METHOD==1) { /* Method 1: Master */
 		for (i=0; i<(int)((NP/m)+1); i++) {
 			for (j=0; j<m; j++) { /* Send a message */
 				if ( (j+m*i) <= (NP-1) ) {
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
-					//tmp[j+m*i][0] = j+m*i;     /* Put own identifier in the message */
-					//tmp[j+m*i][1] = ntasks + (j+m*i);        /* and total number of processes */
 					dest_id=j+1;            /* Destination address */
-					//printf("Sending message -%d- to machine -%d-\n", j+m*i, dest_id);
 					nfeval++;
-					//printf("Sending message %E %E to machine -%d-\n", c[j+m*i][0], c[j+m*i][1], dest_id);
-					//fflush(stdout);
 					err = MPI_Send(c[j+m*i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
-					//err = MPI_Isend(tmp, D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
-					//MPI_Wait(&send_req, &status);
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 				}
 			}
 			for (j=0; j<m; j++) {
 				if ( (j+m*i) <= (NP-1) ) {
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 					err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
-					//err = MPI_Irecv(tmp, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &recv_req);
-					//MPI_Wait(&recv_req, &status);
-					source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
-					cost[source_id-1]=cost_mpi;
-					//printf("Received message %E from process %d\n", cost_mpi, source_id);
-					//printf("--- - ---\n");
-					//fflush(stdout);
+					source_id = (status.MPI_SOURCE); /* Get id of sender */
+					cost[source_id+m*i-1]=cost_mpi;
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
 				}
 			}
 		}
+	}
+	if (MPI_METHOD==2) { /* Method 2: Master */
+		/* Scatter tmp to all proceses, place it in tmp_y */
+		err = MPI_Scatterv(&c, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		nfeval=nfeval+NP;
+		/* Receive messages with scattered data */
+		/* from all slave processes */
+		for (i=1; i<ntasks; i++) {
+			MPI_Recv (&trial_cost_y, MAXPOP*MAXDIM, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, &status);
+			MPI_Get_count(&status, MPI_DOUBLE, &count);  /* Get nr of elements in message */
+			source_id = (status.MPI_SOURCE); /* Get id of sender */
+
+			/* Arrange cost returned from slaves */
+			j=0;
+			for (k=0; k<source_id; k++) {
+				j=j + sendcount[k]/MAXDIM;
+			}
+			/* j holds the correct start index for trial_cost */
+			for (k=0; k<NP; k++) {
+				cost[j+k]=trial_cost_y[k];
+			}
+		}
+	}
    #endif
    cmin = cost[0];
    imin = 0;
@@ -655,7 +737,7 @@ fclose(fpin_ptr);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
 	   L = 0;
 	   do
-	   {                       
+	   {
 	     tmp[i][n] = tmp[i][n] + F*(bestit[n] - tmp[i][n]) + F*((*pold)[r1][n]-(*pold)[r2][n]);
 	     n = (n+1)%D;
 	     L++;
@@ -751,7 +833,7 @@ fclose(fpin_ptr);
 	 }
 /*-------DE/rand/2/bin--------------------------------------------------------------------*/
 	 else
-	 { 
+	 {
 	   assignd(D,tmp[i],(*pold)[i]);
 	   n = (int)(rnd_uni(&rnd_uni_init)*D); 
            for (L=0; L<D; L++) /* perform D binomial trials */
@@ -772,37 +854,58 @@ fclose(fpin_ptr);
       for (i=0; i<NP; i++) /*mpi: */
       {
 	nfeval++;
-	trial_cost[i] = evaluate(D,tmp[i],argv[2]);  /* Evaluate new vector in tmp[] */
+	if (NP) /*Ctrl-C detection*/
+		trial_cost[i] = evaluate(D,tmp[i],argv[2]);  /* Evaluate new vector in tmp[] */
+	if (trial_cost[i]==0) { /*cost is zero ONLY if ctrl-c has been pressed during call to simulator*/
+		NP=0;
+		genmax=0;
+		/* printf("INFO:  de36.c - Mutation.\n", NP); */
+		sleep(1);
+		/* printf("waking-up...\n"); */
+	}
       }
       #else /*mpi: Master code to call slave*/
-	//printf("NP=%d D=%d m=%d\n", NP, D, m);
-	for (i=0; i<(int)((NP/m)+1); i++) {
-		for (j=0; j<m; j++) { /* Send a message */
-			if ( (j+m*i) <= (NP-1) ) {
+	if (MPI_METHOD==1) { /* Method 1: Master */
+		for (i=0; i<(int)((NP/m)+1); i++) {
+			for (j=0; j<m; j++) { /* Send a message */
+				if ( (j+m*i) <= (NP-1) ) {
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
-				//tmp[j+m*i][0] = j+m*i;     /* Put own identifier in the message */
-				//tmp[j+m*i][1] = ntasks + (j+m*i);        /* and total number of processes */
-				dest_id=j+1;            /* Destination address */
-				//printf("Sending message -%d- to machine -%d-\n", j+m*i, dest_id);
-				nfeval++;
-				//printf("Sending message %E %E to machine -%d-\n", tmp[j+m*i][0], tmp[j+m*i][1], dest_id);
-				//fflush(stdout);
-				err = MPI_Send(tmp[j+m*i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
-				//err = MPI_Isend(tmp, D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
-				//MPI_Wait(&send_req, &status);
+					dest_id=j+1;            /* Destination address */
+					nfeval++;
+					err = MPI_Send(tmp[j+m*i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
 /*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+				}
+			}
+			for (j=0; j<m; j++) {
+				if ( (j+m*i) <= (NP-1) ) {
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+					err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
+					source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
+					trial_cost[source_id-1]=cost_mpi;
+/*----- - ----- - ----- - ----- - ----- - ----- - ----- - ----- - -----*/
+				}
 			}
 		}
-		for (j=0; j<m; j++) {
-			if ( (j+m*i) <= (NP-1) ) {
-				err = MPI_Recv(&cost_mpi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); /* Receive a message */
-				//err = MPI_Irecv(tmp, 1, MPI_DOUBLE, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &recv_req);
-				//MPI_Wait(&recv_req, &status);
-				source_id = (status.MPI_SOURCE)+m*i; /* Get id of sender */
-				trial_cost[source_id-1]=cost_mpi;
-				//printf("Received message %E from process %d\n", cost_mpi, source_id);
-				//printf("--- - ---\n");
-				//fflush(stdout);
+	}
+	if (MPI_METHOD==2) { /* Method 2: Master */
+		/* Scatter tmp to all proceses, place it in tmp_y */
+		MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		nfeval=nfeval+NP;
+		/* Receive messages with scattered data */
+		/* from all slave processes */
+		for (i=1; i<ntasks; i++) {
+			MPI_Recv (&trial_cost_y, MAXPOP*MAXDIM, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, &status);
+			MPI_Get_count(&status, MPI_DOUBLE, &count);  /* Get nr of elements in message */
+			source_id = (status.MPI_SOURCE); /* Get id of sender */
+
+			/* Arrange cost returned from slaves */
+			j=0;
+			for (k=0; k<source_id; k++) {
+				j=j + sendcount[k]/MAXDIM;
+			}
+			/* j holds the correct start index for trial_cost */
+			for (k=0; k<NP; k++) {
+				trial_cost[j+k]=trial_cost_y[k];
 			}
 		}
 	}
@@ -810,7 +913,7 @@ fclose(fpin_ptr);
       for (i=0; i<NP; i++) /*mpi: evaluates returned cost*/
       {
 	 if (trial_cost[i] <= cost[i])   /* improved objective function value ? */
-	 {                                  
+	 {
 	    cost[i]=trial_cost[i];
 	    assignd(D,(*pnew)[i],tmp[i]);
 	    if (trial_cost[i]<cmin)          /* Was this a new minimum? */
@@ -893,13 +996,18 @@ fclose(fpin_ptr);
    printf("\n\n");
    fprintf(fpout_ptr,"\n\n");
 
-   if (gen >= genmax) {
-     printf("INFO:  de36.c - Maximum number of generations reached (genmax=%d)\n",genmax);
-     fprintf(fpout_ptr,"INFO:  de36.c - Maximum number of generations reached (genmax=%d)\n",genmax);
-   }
-   if (cvar <= cvarmin) {
-     printf("INFO:  de36.c - Minimum cost variance reached (cvarmin=%E)\n",cvarmin);
-     fprintf(fpout_ptr,"INFO:  de36.c - Minimum cost variance reached (cvarmin=%E)\n",cvarmin);
+   if ((NP == 0) &&(genmax==0)) {
+     printf("INFO:  de36.c - Ctrl-C key pressed.\n");
+     fprintf(fpout_ptr,"INFO:  de36.c - Ctrl-C key pressed.\n");
+   } else {
+	if ((gen >= genmax) && (genmax!=0)) {
+		printf("INFO:  de36.c - Maximum number of generations reached (genmax=%d)\n",genmax);
+		fprintf(fpout_ptr,"INFO:  de36.c - Maximum number of generations reached (genmax=%d)\n",genmax);
+	}
+	if (cvar <= cvarmin) {
+		printf("INFO:  de36.c - Minimum cost variance reached (cvarmin=%E)\n",cvarmin);
+		fprintf(fpout_ptr,"INFO:  de36.c - Minimum cost variance reached (cvarmin=%E)\n",cvarmin);
+	}
    }
 
    printf("Ending optimization\n");
@@ -910,19 +1018,23 @@ fclose(fpin_ptr);
 /*mpi: MPI termination*/
 	#ifdef MPI
 	/*Send exit signal to all*/
-	for (j=0; j<m; j++) {
-		i=0;
-		tmp[i][0] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
-		dest_id=j+1;		/* Destination address */
-		//printf("Sending TERMINATION message -%d- to machine -%d-\n", id, dest_id);
-		//fflush(stdout);
-		err = MPI_Send(tmp[i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
-		//err = MPI_Isend(tmp, 2, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD, &send_req);
-		//MPI_Wait(&send_req, &status);
+	if (MPI_METHOD==1) {
+		for (j=0; j<m; j++) {
+			i=0;
+			tmp[i][0] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
+			dest_id=j+1;		/* Destination address */
+			err = MPI_Send(tmp[i], D, MPI_DOUBLE, dest_id, tag, MPI_COMM_WORLD);
+		}
+	}
+	if (MPI_METHOD==2) {
+		for (i=0; i<NP; i++) {
+			for (j=0; j<D; j++) {
+				tmp[i][j] = 1.7976931348623157e+308; /*DBL_MAX from <float.h>*/;
+			}
+		}
+		err = MPI_Scatterv(&tmp, sendcount, displs, MPI_DOUBLE, &tmp_y, MAXPOP*MAXDIM, MPI_DOUBLE, root, MPI_COMM_WORLD);
 	}
 
-	//printf("Master exiting\n");
-	//fflush(stdout);
 	MPI_Finalize();
 	#endif
 /*mpi: MPI termination*/
@@ -931,3 +1043,31 @@ fclose(fpin_ptr);
 }
 
 /*-----------End of main()------------------------------------------*/
+
+void sigproc(int sig)
+{
+	signal(SIGINT, sigproc); /*  */
+	/* NOTE some versions of UNIX will reset signal to default
+	after each call. So for portability reset signal each time */
+
+	#ifdef MPI
+	const int tag = 42;	        /* Message tag */
+	const int root = 0;     /* Root process in broadcast */
+	int i, j, m, D;
+	double tmp[1][1];
+	int id, ntasks, source_id, dest_id, err;
+	err = MPI_Comm_rank(MPI_COMM_WORLD, &id);     /* Get id of this process */
+	printf("you have pressed ctrl-c  PID=%d\n",id);
+	MPI_Finalize();
+	/* return(EXIT_SUCCESS); */
+	#else
+	/* printf("you have pressed ctrl-c\n"); */
+	sleep(1);
+	#endif
+}
+
+void quitproc(int sig)
+{
+	printf("ctrl-\\ pressed to quit\n");
+	/* exit(0); */ /* normal exit status */
+}

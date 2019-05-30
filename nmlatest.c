@@ -63,7 +63,7 @@
 
 
 /*---------Function declarations----------------------------------------*/
-double extern evaluate(int D, double tmp[], char *argv); /* obj. funct. */
+extern double evaluate(int D, double tmp[], char *argv); /* obj. funct. */
 
 #define MAX_IT      1000      /* maximum number of iterations */
 #define ALPHA       1.0       /* reflection coefficient */
@@ -142,7 +142,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
   
   /* find the initial function values */
   for (j=0;j<=n;j++) {
-    //f[j] = f_rosen(n, v[j]);
+    /* f[j] = f_rosen(n, v[j]); */
     f[j] = evaluate(n,v[j],filename);
   }
 
@@ -197,7 +197,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
       /*vr[j] = (1+ALPHA)*vm[j] - ALPHA*v[vg][j];*/
       vr[j] = vm[j]+ALPHA*(vm[j]-v[vg][j]);
     }
-    //fr = f_rosen(n, vr);
+    /* fr = f_rosen(n, vr); */
     fr = evaluate(n,vr,filename);
     k++;
     
@@ -214,7 +214,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 	/*ve[j] = GAMMA*vr[j] + (1-GAMMA)*vm[j];*/
 	ve[j] = vm[j]+GAMMA*(vr[j]-vm[j]);
       }
-      //fe = f_rosen(n, ve);
+      /* fe = f_rosen(n, ve); */
       fe = evaluate(n,ve,filename);
       k++;
       
@@ -244,7 +244,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 	  /*vc[j] = BETA*v[vg][j] + (1-BETA)*vm[j];*/
 	  vc[j] = vm[j]+BETA*(vr[j]-vm[j]);
 	}
-	//fc = f_rosen(n, vc);
+	/* fc = f_rosen(n, vc); */
 	fc = evaluate(n,vc,filename);
 	k++;
       }
@@ -254,7 +254,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 	  /*vc[j] = BETA*v[vg][j] + (1-BETA)*vm[j];*/
 	  vc[j] = vm[j]-BETA*(vm[j]-v[vg][j]);
 	}
-	//fc = f_rosen(n, vc);
+	/* fc = f_rosen(n, vc); */
 	fc = evaluate(n,vc,filename);
 	k++;
       }
@@ -279,10 +279,10 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 	    }
 	  }
 	}
-	//f[vg] = f_rosen(n, v[vg]);
+	/* f[vg] = f_rosen(n, v[vg]); */
 	f[vg] = evaluate(n,v[vg],filename);
 	k++;
-	//f[vh] = f_rosen(n, v[vh]);
+	/* f[vh] = f_rosen(n, v[vh]); */
 	f[vh] = evaluate(n,v[vh],filename);
 	k++;
 	
@@ -324,7 +324,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
     printf("%e\n",v[vs][j]);
     start[j] = v[vs][j];
   }
-  //min = f_rosen(n, v[vs]);
+  /* min = f_rosen(n, v[vs]); */
   min = evaluate(n,v[vs],filename);
   k++;
   printf("%d Function Evaluations\n",k);
@@ -342,7 +342,7 @@ double simplex(double start[],int n, double EPSILON, double scale, char *filenam
 
 
 
-//int main(int argc, char *argv[])
+/* int main(int argc, char *argv[]) */
 int NM(int argc, char *argv[])
 {
 	double start[250];
@@ -350,9 +350,9 @@ int NM(int argc, char *argv[])
 	int i, nvars;
 
 	/* starting guess for rosenbrock test function */
-	//nvars = 2;
-	//start[0] = -1.2;
-	//start[1] = 1.0;
+	/* nvars = 2; */
+	/* start[0] = -1.2; */
+	/* start[1] = 1.0; */
 	nvars=0;
 	while (parameters[nvars].name[0]  != '\0')
 		nvars++;                                     /*---number of parameters---------------*/

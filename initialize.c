@@ -198,6 +198,7 @@ int initialize(char *filename) /* , double *x) */
 	ReadKey(lkk, "#Optimization Flow#", fspice_cfg);
 	if (strcmp(lkk, "#Optimization Flow#")) {
 		printf("INFO:  initialize.c - Step1 -- #Optimization Flow# key not found\n");
+		fflush(stdout);
 	} else {
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg); /*should Alter be done?*/
 		Str2Lower(lkk);
@@ -258,6 +259,7 @@ int initialize(char *filename) /* , double *x) */
 	ReadKey(lkk, "# Parameters #", fspice_cfg);   /*configuration parameters*/
 	if (strcmp(lkk, "# Parameters #")) {
 		printf("INFO:  initialize.c - Step2 -- No parameters in config file\n");
+		fflush(stdout);
 	} else {
 		i=0;
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
@@ -286,6 +288,10 @@ int initialize(char *filename) /* , double *x) */
 				}
 
 				ReadSubKey(laux, lkk, &ii, ':', ':', 5);                    /*format  */
+				if (laux[3] != 95) { /* 95="_" */
+					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
+					exit(EXIT_FAILURE);
+				}
 				parameters[i].format=-1;        /*number '-1' is used for posterior value validation*/
 				strsub(laux2, laux, 1, 3);
 				if (!strcmp(laux2, "LIN"))
@@ -299,10 +305,27 @@ int initialize(char *filename) /* , double *x) */
 				strsub(laux2, laux, 5, (int)strlen(laux));
 				if (!strcmp(laux2, "DOUBLE"))
 					parameters[i].format=parameters[i].format+1;
-				if (!strcmp(laux2, "INT"))
+				if (!strcmp(laux2, "INT")) {
 					parameters[i].format=parameters[i].format+2;
-
-				if (parameters[i].format==0) {  /*validation*/
+					/*Enforce INT format*/
+					if ((parameters[i].value - (int)parameters[i].value) > 0) {
+						printf("initialize.c - Step2 -- Number defined as INT is not integer in line: '%s'\n", lkk);
+						exit(EXIT_FAILURE);
+					}
+					if ((parameters[i].minimum - (int)parameters[i].minimum) > 0) {
+						printf("initialize.c - Step2 -- Number defined as INT is not integer in line: '%s'\n", lkk);
+						exit(EXIT_FAILURE);
+					}
+					if ((parameters[i].maximum - (int)parameters[i].maximum) > 0) {
+						printf("initialize.c - Step2 -- Number defined as INT is not integer in line: '%s'\n", lkk);
+						exit(EXIT_FAILURE);
+					}
+					if ((parameters[i].maximum-parameters[i].minimum) <= 0) {
+						printf("initialize.c - Step2 -- Minimum and Maximum are equal in line: '%s'\n", lkk);
+						exit(EXIT_FAILURE);
+					}
+				}
+				if (parameters[i].format==2) {  /*validation*/
 					printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 					exit(EXIT_FAILURE);
 				}
@@ -325,7 +348,7 @@ int initialize(char *filename) /* , double *x) */
 
 				i++;
 				if (i > MAXPARAMETERS) {
-					printf("initialize.c - Step2 -- Maximum number of parameter exceeded (>%d)\n",MAXPARAMETERS);
+					printf("initialize.c - Step2 -- Maximum number of parameter reached (>%d). Increase MAXPARAMETERS in initialize.h\n",MAXPARAMETERS);
 					exit(EXIT_FAILURE);
 				}
 			}
@@ -341,6 +364,7 @@ int initialize(char *filename) /* , double *x) */
 	ReadKey(lkk, "# Measurements #", fspice_cfg); /*configuration measurements*/
 	if (strcmp(lkk, "# Measurements #")) {
 		printf("INFO:  initialize.c - Step3 -- No measurements in config file\n");
+		fflush(stdout);
 	} else {
 		i=0;
 		fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
@@ -381,7 +405,7 @@ int initialize(char *filename) /* , double *x) */
 
 				i++;
 				if (i > MAXMEASUREMENTS) {
-					printf("initialize.c - Step3 -- Maximum number of measurements exceeded (>%d)\n",MAXMEASUREMENTS);
+					printf("initialize.c - Step3 -- Maximum number of measurements reached (>%d). Increase MAXMEASUREMENTS in initialize.h\n",MAXMEASUREMENTS);
 					exit(EXIT_FAILURE);
 				}
 			}

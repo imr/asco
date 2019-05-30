@@ -23,8 +23,8 @@
 
 
 /*---------Function declarations----------------------------------------*/
-double extern evaluate(int D, double tmp[], char *argv); /* obj. funct. */
-int extern DE(int argc, char *argv[]);
+extern double evaluate(int D, double tmp[], char *argv); /* obj. funct. */
+extern int DE(int argc, char *argv[]);
 
 
 

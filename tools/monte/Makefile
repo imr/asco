@@ -1,6 +1,6 @@
 #
 CC = gcc
-CFLAGS = -Os
+CFLAGS = -Os -I. -I/usr/include
 
 
 #

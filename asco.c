@@ -30,9 +30,9 @@
 
 
 /*---------Function declarations----------------------------------------*/
-int extern DE(int argc, char *argv[]);
-int extern HJ(int argc, char *argv[]);
-int extern NM(int argc, char *argv[]);
+extern int DE(int argc, char *argv[]);
+extern int HJ(int argc, char *argv[]);
+extern int NM(int argc, char *argv[]);
 
 
 
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 		getcwd(currentdir, sizeof(currentdir));
 
 		sprintf(optimizedir, "/tmp/asco%d", pid); /*allows multiple runs on the same computer name*/
-		//sprintf(optimizedir, "/tmp/asco");        /*alow one run on each computer*/
+		/*sprintf(optimizedir, "/tmp/asco"); */        /*alow one run on each computer*/
 
 		sprintf(lkk, "mkdir %s > /dev/null", optimizedir);
 		system(lkk);

@@ -1,3 +1,15 @@
+ASCO 0.4.2: May 14, 2006
+   * Uses updated multiprocessor optimization algorithm
+   * Minor cygwin compatibility corrections and other minor improvements
+
+   Manual:
+   * Include warning that misconvervenge can occur if AlterMC is set 'too low'
+     before starting simulations re-runs
+   * Selection between MPI_Send and MPI_Scatterv in 'de36.c' added
+
+
+
+
 ASCO 0.4.1: April 9, 2006
    * Multiple simulations can now be runned in the same hostname (computer)
    * Local optimization algorithm: Hooke&Jeeves and Nelder-Mead

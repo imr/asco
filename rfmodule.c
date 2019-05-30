@@ -15,6 +15,7 @@
 /* #include <assert.h> */
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 
@@ -726,12 +727,12 @@ if (FLOAT_EQ(x0_value, x_value, 1e-020))
 */
 				if (x0_value == x_value) /* Special case when (x0_value = x_value), meaning */
 					prev++;          /* that it is equal to one of table extremes       */
-				//if (prev==0) {           /* The following code exist due to numerical error defining how close x0_value == x_value */
-				//	if ((x0_value - x_value) < 1e-20) {
-				//		prev++;          /* that it is equal to one of table extremes  */
-				//		x_value=x0_value;
-				//	}
-				//}
+				/* if (prev==0) { */           /* The following code exist due to numerical error defining how close x0_value == x_value */
+				/*	if ((x0_value - x_value) < 1e-20) { */
+				/*		prev++;  */         /* that it is equal to one of table extremes  */
+				/*		x_value=x0_value; */
+				/*	} */
+				/*} */
 				if (prev==0) { /*validation*/
 					printf("rfmodule.c - RFModule -- Value (%s) is lower than the first value in table: %s\n", x_string, line);
 					exit(EXIT_FAILURE);
