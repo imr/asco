@@ -1,0 +1,12 @@
+# Info #
+Name:P_SUPPLY
+Symbol:ZP_SUPPLY
+Unit:W
+Analysis type:TRAN
+Definition:Power supply consumption
+Note:
+#
+
+# Commands #
+.measure tran #SYMBOL# rms par('i(vdd)*v_supply') from='tmeas_start' to='tmeas_stop'
+#

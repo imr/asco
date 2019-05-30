@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2011 Joao Ramos
+ * Copyright (C) 1999-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 		printf("          alter -eldo <configfile>\n");
 		printf("          alter -hspice <configfile>\n");
 		printf("          alter -spectre <configfile>\n");
+		printf("          alter -ngspice <configfile>\n");
 		printf("\n\n\n");
 	exit(EXIT_FAILURE);
 	}
@@ -61,9 +62,16 @@ int main(int argc, char *argv[])
 				if (!strcmp(argv[1], "spectre"))
 					spice=4;
 				break;
-			case 'r': /*rosen*/
+			case 'q': /*Qucs*/
 				printf("alter.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+				exit(EXIT_FAILURE);
+			case 'n': /*ngspice*/
+				if (!strcmp(argv[1], "ngspice"))
+					spice=51;
 				break;
+			case 'g': /*general*/
+				printf("alter.c -- Unsupport SPICE simulator: %s\n", argv[1]);
+				exit(EXIT_FAILURE);
 			default:
 				printf("alter.c -- Unsupport SPICE simulator: %s\n", argv[1]);
 				exit(EXIT_FAILURE);

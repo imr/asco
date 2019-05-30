@@ -1,0 +1,21 @@
+# Info #
+Name:SLOPEOFF
+Symbol:ZSLOPEOFF
+Unit:V/s
+Analysis type:TRAN
+Definition:Drain voltage slope before turn-on
+Note:
+#
+
+# Commands #
+vat 1111 0 'tmeas_aux-(inp_period/2)'
+.control
+set noaskquit
+setplot tran1
+linearize v(#NODE#)
+let vderiv = deriv(v(#NODE#))
+let atval = tran1.v(1111)[0]
+meas tran #SYMBOL# FIND vderiv  at=atval
+quit
+.endc
+#

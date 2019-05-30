@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2011 Joao Ramos
+ * Copyright (C) 1999-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -109,6 +109,8 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 			case 50: /*Qucs*/
 				printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
 				exit(EXIT_FAILURE);
+			case 51: /*ngspice*/
+				break;
 			case 100: /*general*/
 				printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
 				exit(EXIT_FAILURE);
@@ -218,6 +220,9 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 					case 50: /*Qucs*/
 						printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
 						exit(EXIT_FAILURE);
+					case 51: /*ngspice*/
+						fseek(falterINC, -5, SEEK_END);               /*properly position the pointer*/
+						break;
 					case 100: /*general*/
 						printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
 						exit(EXIT_FAILURE);
@@ -235,13 +240,15 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 				case 2: /*HSPICE*/
 					break;
 				case 3: /*LTspice*/
-					break;
 					printf("auxfunc_alter.c - CreateALTERinc -- LTspice not supported\n");
+					break;
 				case 4: /*Spectre*/
 					fprintf(falterINC, "simulator lang=spectre\n\n");
 					break;
 				case 50: /*Qucs*/
 					printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
+					break;
+				case 51: /*ngspice*/
 					break;
 				case 100: /*general*/
 					printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
@@ -287,6 +294,9 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 					case 50: /*Qucs*/
 						printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
 						exit(EXIT_FAILURE);
+					case 51: /*ngspice*/
+						fprintf(falterINC, "*.ALTER @%d ->", index);
+						break;
 					case 100: /*general*/
 						printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
 						exit(EXIT_FAILURE);
@@ -331,8 +341,10 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 									if ( (k==0) || (i==1) ){ /*add index to altergroup line*/
 										strcpy(lkk, alter[k].text);
 										l = strpos2(lkk, " ", 1);
-										sprintf(data, "%d", index);
-										InsertString(lkk, data, l, l);
+										if (l!=0) { /*do not add index unless a " "  is found*/
+											sprintf(data, "%d", index);
+											InsertString(lkk, data, l, l);
+										}
 										fprintf(falterINC, "%s\n", lkk);
 									} else
 										fprintf(falterINC, "%s\n", alter[k].text);
@@ -347,6 +359,9 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 								case 50: /*Qucs*/
 									printf("auxfunc_alter.c - CreateALTERinc -- Qucs not supported\n");
 									exit(EXIT_FAILURE);
+								case 51: /*ngspice*/
+									fprintf(falterINC, "%s\n", alter[k].text);
+									break;
 								case 100: /*general*/
 									printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
 									exit(EXIT_FAILURE);
@@ -358,6 +373,25 @@ void CreateALTERinc(char *ConfigFile, char *OutputFile, int append)
 					}
 				}
 				putc('\n', falterINC);
+			}
+			switch(spice) { /*ngspice special case*/
+				case 1: /*Eldo*/
+				case 2: /*HSPICE*/
+				case 3: /*LTspice*/
+				case 4: /*Spectre*/
+				case 50: /*Qucs*/
+					break;
+				case 51: /*ngspice*/
+					fprintf(falterINC, ".control\n");
+					fprintf(falterINC, "quit\n");
+					fprintf(falterINC, ".endc\n");
+					break;
+				case 100: /*general*/
+					printf("auxfunc_alter.c - CreateALTERinc -- GENERAL not supported\n");
+					exit(EXIT_FAILURE);
+				default:
+					printf("auxfunc_alter.c - CreateALTERinc -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
 			}
 		}
 	}

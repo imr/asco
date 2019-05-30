@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 1999-2006 Joao Ramos
+ *  Copyright (C) 1999-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -109,7 +109,7 @@ void SimpleParametersCategory(int num_measures, char *llog, statistics stats, FI
 void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE **fcfg)
 {
 	int i, j;
-	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE];
+	char lkk1[LONGSTRINGSIZE], lkk2[LONGSTRINGSIZE], lkk3[LONGSTRINGSIZE];
 
 		fgets2(lkk, LONGSTRINGSIZE, *fcfg);
 		while ((lkk[0] != '#') && (lkk[0] != '\0') && (!feof(*fcfg))) {
@@ -136,8 +136,8 @@ void ComplexParametersCategory(char *llog, statistics stats, FILE **fOut, FILE *
 				j=1;
 				ReadSubKey(lkk1, lkk, &j, ':', ':', 0);
 				strsub(lkk1, lkk, 1, j);
-				sprintf(lkk2, "%s:%E:%E", lkk2, stats.min[i], stats.max[i]);
-				strcat(lkk1, lkk2);
+				sprintf(lkk3, "%s:%E:%E", lkk2, stats.min[i], stats.max[i]);
+				strcat(lkk1, lkk3);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
 				ReadSubKey(lkk2, lkk, &j, ':', ':', 0);
@@ -187,33 +187,27 @@ void CreateStatistics(char *InputFile, char *OutputFile)
 		exit(EXIT_FAILURE);
 	}
 
-	fgets2(lkk, LONGSTRINGSIZE, fIn);
-	if (P_eof(fIn)) /*if there is only 1 line*/
-		fseek(fIn, 0, SEEK_SET);
-	strsub(lkk1, lkk, 1, strpos2(lkk, ":", 1)-1);
-
 	i=0; j=1; k=0;
 	while (!P_eof(fIn)) {
-		aux = asc2real(lkk1, 1, (int)strlen(lkk1));
-		stats.avg[i] += aux;
-		stats.sig[i] += aux * aux;
-			/*variancia=sum(x^2)/n - (avg(x))^2 # sigma=sqrt(variancia)*/
-		if (aux > stats.max[i])
-			stats.max[i] = aux;
-		if (aux < stats.min[i])
-			stats.min[i] = aux;
-		if (j==(int)strlen(lkk)) {
-			num_measures=i;
-			i=0;j=1;k++;
-			fgets2(lkk, LONGSTRINGSIZE, fIn);
-			strsub(lkk1, lkk, 1, strpos2(lkk, ":", 1)-1);
-		} else {
+		i=0;j=1;k++;
+		fgets2(lkk, LONGSTRINGSIZE, fIn);
+		strsub(lkk1, lkk, 1, strpos2(lkk, ":", 1)-1);
+
+		while (j < (int)strlen(lkk) ) {
+			aux = asc2real(lkk1, 1, (int)strlen(lkk1));
+			stats.avg[i] += aux;
+			stats.sig[i] += aux * aux;
+				/*variance=sum(x^2)/n - (avg(x))^2 # sigma=sqrt(variance)*/
+			if (aux > stats.max[i])
+				stats.max[i] = aux;
+			if (aux < stats.min[i])
+				stats.min[i] = aux;
 			ReadSubKey(lkk1, lkk, &j, ':', ':', 1);
 			i++; j--;
 		}
-
 	}
 
+	num_measures=i;
 	WriteStats(num_measures-1, k, stats, &fOut);
 
 	/* -- */

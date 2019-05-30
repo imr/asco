@@ -14,5 +14,5 @@ Note:
 # Post Processing #
 MEASURE_VAR:      fft: SEARCH_FOR:'  ******  fft analysis': S_COL:01: P_LINE:16: P_COL:37:47
 MEASURE_VAR:       rl: SEARCH_FOR:' .param filt_res ='
-MEASURE_VAR: #SYMBOL#: MATH:&fft: 2: *: ^: 2 : /: &rl: /:
+MEASURE_VAR: #SYMBOL#: MATH:&fft: ^: 2 : /: &rl: /:
 #

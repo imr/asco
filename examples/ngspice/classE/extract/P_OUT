@@ -1,0 +1,22 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:Output power at the main frequency
+Note:
+#
+
+# Commands #
+.control
+run
+fourier 850e6 v(#NODE#)
+.endc
+.measure tran rl PARAM=FILT_RES
+#
+
+# Post Processing #
+MEASURE_VAR:        fft: SEARCH_FOR:'Harmonic Frequency   ': S_COL:01: P_LINE:3: P_COL:22:33
+MEASURE_VAR:         rl: SEARCH_FOR:'rl                  ='
+MEASURE_VAR:   #SYMBOL#: MATH:&fft: ^: 2 : /: &rl: /:
+#

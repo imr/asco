@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2010 Joao Ramos
+ * Copyright (C) 1999-2012 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -143,6 +143,10 @@ void MCmosfet(MC_CMOSdata mosfet, char *lkk, char *laux, int *ptr, FILE *fout)
 			case 50: /*Qucs*/
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for Qucs\n");
 				exit(EXIT_FAILURE);
+				break;
+			case 51: /*ngspice*/
+				fprintf(fout, ".param w%d='AGAUSS(%s, %s*1e-6, 1)' ", *ptr, w_string, DeltaBeta);
+				fprintf(fout, "vto%d='AGAUSS(0, %s*1e-9, 1)'\n", *ptr, DeltaVt);
 				break;
 			case 100: /*general*/
 				printf("auxfunc_monte.c - MCmosfet -- Monte Carlo not implemente for GENERAL\n");
@@ -344,6 +348,49 @@ void MonteCarlo(char *ConfigFile, char *InputFile, char *OutputFile)
 			fgets2(lkk, LONGSTRINGSIZE, fin);
 			strcpy(laux, lkk); /*lkk maintains character case*/
 			Str2Lower(laux);   /*laux constains only lower caps*/
+			switch(spice) { /*ngspice special case*/
+				case 1: /*Eldo*/
+					break;
+				case 2: /*HSPICE*/
+					break;
+				case 3: /*LTspice*/
+					printf("auxfunc_monte.c - MonteCarlo -- Monte Carlo not implemente for LTspice\n");
+					exit(EXIT_FAILURE);
+					break;
+				case 4: /*Spectre*/
+					printf("auxfunc_monte.c - MonteCarlo -- Monte Carlo not implemente for Spectre\n");
+					exit(EXIT_FAILURE);
+					break;
+				case 50: /*Qucs*/
+					printf("auxfunc_monte.c - MonteCarlo -- Monte Carlo not implemente for Qucs\n");
+					exit(EXIT_FAILURE);
+					break;
+				case 51: /*ngspice*/
+					if (i==0) {
+						i=strpos2(laux, ".control", 1); /*must ignore what is inside a .control section as 'run' will be taken for a resistor below*/
+					}
+					if (i==1) {
+						i=strpos2(laux, ".endc", 1); /*detects .endc*/
+						if (i==0)
+							i=1; /*.endc was not yet found*/
+						else
+							i=0; /*.endc was found        */
+					}
+					if (i) {
+						if ((laux[0]!='.') && (laux[0]!=' ')) {
+							sprintf(STR2, " %s", laux);
+							strcpy(laux, STR2);
+						}
+					}
+					break;
+				case 100: /*general*/
+					printf("auxfunc_monte.c - MonteCarlo -- Monte Carlo not implemente for GENERAL\n");
+					exit(EXIT_FAILURE);
+					break;
+				default:
+					printf("auxfunc_monte.c - MonteCarlo -- Something unexpected has happened!\n");
+					exit(EXIT_FAILURE);
+			}
 			switch (laux[0]) {
 				case 'm':   /*MonteCarlo for MOSFET transistors*/
 					MCmosfet(mosfet, lkk, laux, &ptr, fout);

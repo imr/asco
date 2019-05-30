@@ -1,0 +1,23 @@
+# Info #
+Name:Phase margin
+Symbol:ZPM
+Unit:deg
+Analysis type:AC
+Definition:PM = 180 deg + phase at UGF
+Note: 
+#
+
+# Commands #
+.control
+*measure the phase margin
+MEAS AC phasem FIND vp(VOUT) WHEN VDB(VOUT)=0
+*scale the phase margin
+let #SYMBOL# = 180 + 180/PI*phasem
+* print phase margin into log file as ASCO input
+print #SYMBOL#
+.endc
+#
+
+# Post Processing #
+MEASURE_VAR: #SYMBOL#: SEARCH_FOR:'#SYMBOL# ='
+#

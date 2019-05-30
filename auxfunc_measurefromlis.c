@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2012 Joao Ramos
+ * Copyright (C) 1999-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -112,6 +112,9 @@ int IsItATransistor(char *line, int mem, int i, char *nextline)
 		case 50: /*Qucs*/
 			return 0;
 			break;
+		case 51: /*ngspice*/
+			return 0;
+			break;
 		case 100: /*general*/
 			return 0;
 			break;
@@ -188,6 +191,9 @@ int DetectsTransistorColumns(char *lelement, int index[])
 		case 50: /*Qucs*/
 			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
+		case 51: /*ngspice*/
+			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- ngspice not supported\n");
+			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - DetectsTransistorColumns -- GENERAL not supported\n");
 			exit(EXIT_FAILURE);
@@ -244,6 +250,14 @@ void DoMath(int num_measures)
 								break;
 							}
 						}
+					}
+					if (k==i) {
+						#ifdef ASCO
+						printf("auxfunc_measurefromlis.c - DoMath -- Field MEASURE_VAR '%s', defined in '%s, not found memory. Revise file in ./extract'\n", STR1, measure[k].search);
+						#else
+						printf("auxfunc_measurefromlis.c - DoMath -- Field MEASURE_VAR '%s', defined in '%s, not found memory. Revise config file'\n", STR1, measure[k].search);
+						#endif
+						exit(EXIT_FAILURE);
 					}
 					data = asc2real(measure[k].data, 1, (int)strlen(measure[k].data));
 				} else {
@@ -375,6 +389,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 				case 3: /*LTspice*/
 				case 4: /*Spectre*/
 				case 50: /*Qucs*/
+				case 51: /*ngspice*/
 				case 100: /*general*/
 					strcpy(laux, "                     ");
 					break;
@@ -463,6 +478,7 @@ void WriteToFile(int num_measures, char *laux, int first, statistics *stats, FIL
 			case 3: /*LTspice*/
 			case 4: /*Spectre*/
 			case 50: /*Qucs*/
+			case 51: /*ngspice*/
 			case 100: /*general*/
 				strcpy(laux, "                     ");
 				break;
@@ -701,6 +717,9 @@ int CMOSText2Line(char *lkk2, char *OutputFile)
 		case 50: /*Qucs*/
 			printf("auxfunc_measurefromlis.c - CMOSText2Line -- Qucs not supported\n");
 			exit(EXIT_FAILURE);
+		case 51: /*ngspice*/
+			printf("auxfunc_measurefromlis.c - CMOSText2Line -- ngspice not supported\n");
+			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - CMOSText2Line -- GENERAL not supported\n");
 			exit(EXIT_FAILURE);
@@ -913,6 +932,9 @@ char *CMOSLine2Text(char *Result, int measure_x_lines_below, char *OutputFile)
 			exit(EXIT_FAILURE);
 		case 50: /*Qucs*/
 			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- Qucs not supported\n");
+			exit(EXIT_FAILURE);
+		case 51: /*ngspice*/
+			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- ngspice not supported\n");
 			exit(EXIT_FAILURE);
 		case 100: /*general*/
 			printf("auxfunc_measurefromlis.c - CMOSLine2Text -- GENERAL not supported\n");
@@ -1172,6 +1194,7 @@ int ReadDataFromConfigFile(char *ConfigFile, char *OutputFile)
 			measure[0].column1 = 1; measure[0].column2 = 0;
 			break;
 		case 50: /*Qucs*/
+		case 51: /*ngspice*/
 		case 100: /*general*/
 			strcpy(measure[0].var_name, "Simulation Conditions");
 			strcpy(measure[0].search, "Not To Be Found");
@@ -1267,7 +1290,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 
 	/*BEGIN: process file*/
 	fgets2(lnext, LONGSTRINGSIZE, fLIS);
-	while (!P_eof(fLIS)) {
+	while ( (!P_eof(fLIS)) || (strcmp(lkk,lnext)) ) {
 		/*0*/
 		strcpy(lprevious, lkk);              /* previous line */
 		strcpy(lkk, lnext);                  /* current line  */
@@ -1306,6 +1329,10 @@ void ProcessOutputFile(char *OutputFile, int mem)
 						break;
 					case 50: /*Qucs*/
 						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Qucs not supported\n");
+						exit(EXIT_FAILURE);
+						break;
+					case 51: /*ngspice*/
+						printf("auxfunc_measurefromlis.c - ProcessOutputFile -- ngspice not supported\n");
 						exit(EXIT_FAILURE);
 						break;
 					case 100: /*general*/
@@ -1362,6 +1389,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 //---------------------				strcpy(lkk1, measure[0].search); /*Alter Group ` ...                                               */
 					break;                                   /*                                                                */
 				case 50: /*Qucs*/                                /*                                                                */
+				case 51: /*ngspice*/                             /*                                                                */
 				case 100: /*general*/                            /*                                                                */
 					break;                                   /*                                                                */
 				default:                                         /*                                                                */
@@ -1382,6 +1410,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 						case 3: /*LTspice*/
 						case 4: /*Spectre*/
 						case 50: /*Qucs*/
+						case 51: /*ngspice*/
 						case 100: /*general*/
 							WriteToFile(j, lprevious, first, &stats, &fSummary);
 							break;
@@ -1413,6 +1442,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 						strcpy(measure[0].data, lkk1);
 						break;
 					case 50: /*Qucs*/
+					case 51: /*ngspice*/
 					case 100: /*general*/
 						strcpy(measure[0].data, "");
 						break;
@@ -1444,6 +1474,7 @@ void ProcessOutputFile(char *OutputFile, int mem)
 									strcpy(measure[0].search, "Operating-Point information `mc");
 								break;
 							case 50: /*Qucs*/
+							case 51: /*ngspice*/
 							case 100: /*general*/
 								break;
 							default:
@@ -1514,6 +1545,9 @@ void ProcessOutputFile(char *OutputFile, int mem)
 										break;
 									case 50: /*Qucs*/
 										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- Qucs not supported\n");
+										exit(EXIT_FAILURE);
+									case 51: /*ngspice*/
+										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- ngspice not supported\n");
 										exit(EXIT_FAILURE);
 									case 100: /*general*/
 										printf("auxfunc_measurefromlis.c - ProcessOutputFile -- GENERAL not supported\n");

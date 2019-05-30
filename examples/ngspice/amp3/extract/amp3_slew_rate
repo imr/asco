@@ -1,0 +1,24 @@
+# Info #
+Name:AMP3 Slew rate
+Symbol:ZSR
+Unit:V/s
+Analysis type:AC
+Definition:SR_CALC = GBW*pi*(VGS-VT)
+Note:
+#
+
+# Commands #
+.control
+meas AC gbw TRIG AT=1 TARG VDB(VOUT) VAL=0 FALL=1
+* slew rate according to formula given in
+* examples\HSPICE\amp3\extract\amp3_slew_rate
+let vgeff = (@M.XOPAMP.M11[vgs] - @M.XOPAMP.M11[vth])
+let #SYMBOL#=vgeff*gbw*3.14
+print #SYMBOL#
+quit
+.endc
+#
+
+# Post Processing #
+MEASURE_VAR: #SYMBOL#: SEARCH_FOR:'#SYMBOL# ='
+#

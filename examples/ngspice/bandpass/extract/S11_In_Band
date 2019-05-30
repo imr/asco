@@ -1,0 +1,20 @@
+# Info #
+Name:P_OUT
+Symbol:ZP_OUT
+Unit:W
+Analysis type:TRAN
+Definition:S11 in Band
+Note:
+#
+
+# Commands #
+.control
+MEAS AC s11_in_band max S11db from=960e6 to=1040e6
+.endc
+#
+#
+
+# Post Processing #
+MEASURE_VAR:      S11: SEARCH_FOR:'s11_in_band         ='
+MEASURE_VAR: #SYMBOL#: MATH:&S11:-1:*
+#

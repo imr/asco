@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2004-2012 Joao Ramos
+ * Copyright (C) 2004-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre', 'Qucs' and 'ngspice' circuit simulator optimization capabilities
  *
  */
 
@@ -374,9 +374,18 @@ int initialize(char *filename) /* , double *x) */
 					printf("initialize.c - Step2 -- Incorrect line format: %s\n", lkk);
 					exit(EXIT_FAILURE);
 				}
+				
 				strsub(parameters[i].name, lkk, 1, ii-1);                   /*name    */
+				if (!(int)strlen(parameters[i].name)) {
+					printf("initialize.c - Step2 -- Name size equal to zero not allowed: %s\n", lkk);
+					exit(EXIT_FAILURE);
+				}
 
 				ReadSubKey(parameters[i].symbol, lkk, &ii, '#', '#', 5);    /*symbol  */
+				if (!(int)strlen(parameters[i].symbol)) {
+					printf("initialize.c - Step2 -- Symbol size equal to zero not allowed: %s\n", lkk);
+					exit(EXIT_FAILURE);
+				}
 
 				ReadSubKey(laux, lkk, &ii, ':', ':', 5);
 				parameters[i].value=asc2real(laux, 1, (int)strlen(laux));   /*value   */
@@ -448,12 +457,12 @@ int initialize(char *filename) /* , double *x) */
 
 				ReadSubKey(laux, lkk, &ii, ':', ':', 4);                    /*optimize */
 				if (!strcmp(laux, "OPT"))
-					parameters[i].optimize=1;                           /*is it "OPT"?                                    */
+					parameters[i].optimize=1;                          /*is it "OPT"?                                    */
 				else {
-					if (!strcmp(laux, "---")) {                         /*if it is "---", then                            */
-						parameters[i].optimize=0;                   /*do not optimize                                 */
-						parameters[i].minimum=parameters[i].value;  /*furthermore, if it is just to define a quantity */
-						parameters[i].maximum=parameters[i].value;  /*then make minimum=maximum=value                 */
+					if (!strcmp(laux, "---")) {                        /*if it is "---", then                            */
+						parameters[i].optimize=0;                  /*do not optimize                                 */
+						parameters[i].minimum=parameters[i].value; /*furthermore, if it is just to define a quantity */
+						parameters[i].maximum=parameters[i].value; /*then make minimum=maximum=value                 */
 					} else {
 						printf("initialize.c - Step2 -- Unrecognized option: %s\n", laux);
 						exit(EXIT_FAILURE);
@@ -467,7 +476,6 @@ int initialize(char *filename) /* , double *x) */
 				}
 			}
 			fgets2(lkk, LONGSTRINGSIZE, fspice_cfg);
-
 		}
 	}
 
@@ -547,6 +555,9 @@ int initialize(char *filename) /* , double *x) */
 			break;
 		case 50: /*Qucs*/
 			sprintf(laux, "%s%s", filename, ".txt");
+			break;
+		case 51: /*ngspice*/
+			sprintf(laux, "%s%s", filename, ".sp");
 			break;
 		case 100: /*general*/
 			sprintf(laux, "%s%s", filename, ".txt");
@@ -628,6 +639,12 @@ int initialize(char *filename) /* , double *x) */
 			break;
 		case 50: /*Qucs*/                   /* ".end" does not exist in Qucs syntax */
 			break;
+		case 51: /*ngspice*/
+			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
+				printf("initialize.c - Step4.1 -- End not found in %s.sp\n", filename);
+				exit(EXIT_FAILURE);
+			}
+			break;
 		case 100: /*general*/
 			break;
 		default:
@@ -683,6 +700,8 @@ int initialize(char *filename) /* , double *x) */
 			break;
 		case 50: /*Qucs*/
 			break;
+		case 51: /*ngspice*/
+			break;
 		case 100: /*general*/
 			break;
 		default:
@@ -733,6 +752,9 @@ int initialize(char *filename) /* , double *x) */
 			case 50: /*Qucs*/
   				fprintf(fspice_tmp, "# %i) Extract \'%s\'\n", i+1, lkk);
 				break;
+			case 51: /*ngspice*/
+  				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
+				break;
 			case 100: /*general*/
   				fprintf(fspice_tmp, "* %i) Extract \'%s\'\n", i+1, lkk);
 				break;
@@ -764,6 +786,8 @@ int initialize(char *filename) /* , double *x) */
 					break;
 				case 50: /*Qucs*/
 					break;
+				case 51: /*ngspice*/
+					break;
 				case 100: /*general*/
 					break;
 				default:
@@ -792,6 +816,10 @@ int initialize(char *filename) /* , double *x) */
 		ii=1;
 		while ((*measure[ii].var_name) != '\0') /* finds the proper entry */
 			ii++;                           /* place. Store in 'ii'   */
+		if (ii > MAXMEAS-1) {
+			printf("initialize.c - Step4.2.2 -- Maximum number of measurements reached (>%d). Increase MAXMEAS in auxfunc_measurefromlis.h\n", MAXMEAS);
+			exit(EXIT_FAILURE);
+		}
 
 		if (strcmp((sprintf(laux, "%.11s", lkk), laux), "MEASURE_VAR")) { /*general case, if it's not a "MEASURE_VAR"; data from "/extract/<file>"*/
 			sprintf(lkk, "%s%s", UNIQUECHAR,measurements[i].meas_symbol);
@@ -821,6 +849,16 @@ int initialize(char *filename) /* , double *x) */
 					break;
 				case 50: /*Qucs*/
 					break;
+				case 51: /*ngspice*/
+					sprintf(lkk, "%s%s", UNIQUECHAR, measurements[i].meas_symbol);
+					Str2Lower(lkk);
+					ccode=(int)strlen(lkk);
+					while (ccode<20) {
+						strcat(lkk, " ");
+						ccode++;
+					}
+					strcat(lkk, "=");
+					break;
 				case 100: /*general*/
 					break;
 				default:
@@ -836,8 +874,52 @@ int initialize(char *filename) /* , double *x) */
 				#else
 				ii=ProcessMeasureVar(lkk, ii, "NUL");
 				#endif
-				ii++;
+				switch(spice) {
+					case 1: /*Eldo*/
+						ccode=strpos2(measure[ii].search, UNIQUECHAR, 1);
+						//if (ccode) {
+						//	Str2Upper(measure[ii].search);
+						//}
+						break;
+					case 2: /*HSPICE*/
+						ccode=strpos2(measure[ii].search, UNIQUECHAR, 1);
+						//if (ccode) {
+						//	Str2Lower(measure[ii].search);
+						//}
+						break;
+					case 3: /*LTspice*/
+						ccode=strpos2(measure[ii].search, UNIQUECHAR, 1);
+						//if (ccode) {
+						//	Str2Lower(measure[ii].search);
+						//}
+						break;
+					case 4: /*Spectre*/
+						break;
+					case 50: /*Qucs*/
+						break;
+					case 51: /*ngspice*/
+						ccode=strpos2(measure[ii].search, "MATH", 1); /*DO NOT change MATH lines character case*/
+						if (!ccode){
+							ccode=strpos2(measure[ii].search, UNIQUECHAR, 1);
+							if (ccode) {
+								Str2Lower(measure[ii].search);
+							}
+						}
+						break;
+					case 100: /*general*/
+						break;
+					default:
+						printf("initialize.c - Step4.2.2 -- Something unexpected has happened!\n");
+						exit(EXIT_FAILURE);
+				}
 				ReadKey(lkk, "MEASURE_VAR", fextract);
+				if ((int)strlen(lkk)) {
+					ii++;
+					if (ii > MAXMEAS-1) {
+						printf("initialize.c - Step4.2.2 -- Maximum number of measurements reached (>%d). Increase MAXMEAS in auxfunc_measurefromlis.h\n", MAXMEAS);
+						exit(EXIT_FAILURE);
+					}
+				}
 			}
 		}
 	/*---------------------------------------------------------------*/
@@ -907,6 +989,9 @@ int initialize(char *filename) /* , double *x) */
 	/*Special case to deal with Spectre MDL*/
 			break;
 		case 50: /*Qucs*/
+			break;
+		case 51: /*ngspice*/
+			fprintf(fspice_tmp, "%s\n", ".end");
 			break;
 		case 100: /*general*/
 			break;

@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2005-2012 Joao Ramos
+ * Copyright (C) 2005-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre', 'Qucs' and 'ngspice' circuit simulator optimization capabilities
  *
  */
 
@@ -70,6 +70,8 @@ int ExtractDeviceValuePosition(char *line, int DataSource)
 			j=j+2;
 			break;
 		case 50: /*Qucs*/
+			break;
+		case 51: /*ngspice*/
 			break;
 		case 100: /*general*/
 			break;
@@ -192,6 +194,8 @@ int RFModule(char *line, int optimize, FILE* fout)
 				}
 				break;
 			case 50: /*Qucs*/
+				break;
+			case 51: /*ngspice*/
 				break;
 			case 100: /*general*/
 				break;
@@ -347,6 +351,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 								break;
 							case 50: /*Qucs*/
 								break;
+							case 51: /*ngspice*/
+								fprintf(fout, ".subckt %s_sub ", rf[i].subckt);
+								break;
 							case 100: /*general*/
 								break;
 							default:
@@ -360,7 +367,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 						fgets2(laux2, LONGSTRINGSIZE, fspice_cfg); /* Device: */
 						fgets2(laux2, LONGSTRINGSIZE, fspice_cfg); /* Terminal: */
 						strsub(laux3, laux2, 10, (int)strlen(laux2)); /* copies the terminals    */
-						fprintf(fout, "%s ", laux3);                  /* and prints them to file */
+						fprintf(fout, "%s", laux3);                   /* and prints them to file */
 
 						switch(spice) {
 							case 1: /*Eldo*/
@@ -373,6 +380,8 @@ int RFModule(char *line, int optimize, FILE* fout)
 								break;
 							case 50: /*Qucs*/
 								break;
+							case 51: /*ngspice*/
+								break;
 							case 100: /*general*/
 								break;
 							default:
@@ -384,8 +393,26 @@ int RFModule(char *line, int optimize, FILE* fout)
 							fgets2(laux2, LONGSTRINGSIZE, fspice_cfg);
 							if ((laux2[0] != '#') && (laux2[0] != '*') ) {
 								j=ExtractDeviceValuePosition(laux2, 0);
-								k = (int)strlen(laux2);
-								strsub(laux3, laux2, j+1, k-j+1);
+								switch(spice) {
+									case 1: /*Eldo*/
+									case 2: /*HSPICE*/
+									case 3: /*LTspice*/
+									case 4: /*Spectre*/
+									case 50: /*Qucs*/
+										k = (int)strlen(laux2);
+										strsub(laux3, laux2, j+1, k-j);
+										break;
+									case 51: /*ngspice*/
+										ReadSubKey(laux3, laux2, &j, '\'', '\'', 5);
+										break;
+									case 100: /*general*/
+										k = (int)strlen(laux2);
+										strsub(laux3, laux2, j+1, k-j);
+										break;
+									default:
+										printf("rfmodule.c - Step4.1 -- Something unexpected has happened!\n");
+										exit(EXIT_FAILURE);
+								}
 								StripSpaces(laux3);
 								fprintf(fout, " %s=1", laux3);
 							}
@@ -413,12 +440,15 @@ int RFModule(char *line, int optimize, FILE* fout)
 									case 1: /*Eldo*/
 									case 2: /*HSPICE*/
 									case 3: /*LTspice*/
-										fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+										fprintf(fout, ".ends %s.sub\n", rf[i].subckt);
 										break;
 									case 4: /*Spectre*/
 										fprintf(fout, "ends %s_sub\n", rf[i].subckt);
 										break;
 									case 50: /*Qucs*/
+										break;
+									case 51: /*ngspice*/
+										fprintf(fout, ".ends %s_sub\n", rf[i].subckt);
 										break;
 									case 100: /*general*/
 										break;
@@ -439,14 +469,22 @@ int RFModule(char *line, int optimize, FILE* fout)
 						case 3: /*LTspice*/
 							j=ExtractDeviceValuePosition(line, 1);
 							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
 							sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
 							break;
 						case 4: /*Spectre*/
 							j=strpos2(line, ")", 1);
 							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
 							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
 							break;
 						case 50: /*Qucs*/
+							break;
+						case 51: /*ngspice*/
+							j=ExtractDeviceValuePosition(line, 1);
+							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
+							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
 							break;
 						case 100: /*general*/
 							break;
@@ -485,13 +523,21 @@ int RFModule(char *line, int optimize, FILE* fout)
 									k = strpos2(laux2, "'", 1);
 									if(k) {
 										k=1;
-										ReadSubKey(laux2, laux3, &k, '\'', '\'', 0); /* copies the subckt */
+										ReadSubKey(laux2, laux3, &k, '\'', '\'', 5); /* copies the subckt */
 										strcpy(laux3, laux2);
 									}
 									break;
 								case 4: /*Spectre*/
 									break;
 								case 50: /*Qucs*/
+									break;
+								case 51: /*ngspice*/
+									k = strpos2(laux2, "'", 1);
+									if(k) {
+										k=1;
+										ReadSubKey(laux2, laux3, &k, '\'', '\'', 5); /* copies the subckt */
+										strcpy(laux3, laux2);
+									}
 									break;
 								case 100: /*general*/
 									break;
@@ -514,6 +560,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 										strsub(laux2, line, j+1, k-j-1);
 										break;
 									case 50: /*Qucs*/
+										break;
+									case 51: /*ngspice*/
+										strsub(laux2, line, j, k-j);
 										break;
 									case 100: /*general*/
 										break;
@@ -712,6 +761,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 								break;
 							case 50: /*Qucs*/
 								break;
+							case 51: /*ngspice*/
+								fprintf(fout, ".subckt %s_sub ", rf[i].subckt);
+								break;
 							case 100: /*general*/
 								break;
 							default:
@@ -737,7 +789,7 @@ int RFModule(char *line, int optimize, FILE* fout)
 								fprintf(fout, "\nparameters ");
 								break;
 							case 50: /*Qucs*/
-								break;
+							case 51: /*ngspice*/
 							case 100: /*general*/
 								break;
 							default:
@@ -778,12 +830,15 @@ int RFModule(char *line, int optimize, FILE* fout)
 									case 1: /*Eldo*/
 									case 2: /*HSPICE*/
 									case 3: /*LTspice*/
-										fprintf(fout, ".ENDS %s.sub\n", rf[i].subckt);
+										fprintf(fout, ".ends %s.sub\n", rf[i].subckt);
 										break;
 									case 4: /*Spectre*/
 										fprintf(fout, "ends %s_sub\n", rf[i].subckt);
 										break;
 									case 50: /*Qucs*/
+										break;
+									case 51: /*ngspice*/
+										fprintf(fout, ".ends %s_sub\n", rf[i].subckt);
 										break;
 									case 100: /*general*/
 										break;
@@ -804,14 +859,22 @@ int RFModule(char *line, int optimize, FILE* fout)
 						case 3: /*LTspice*/
 							j=ExtractDeviceValuePosition(line, 1);
 							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
 							sprintf(laux3, "X%s %s.sub", laux2, rf[i].subckt);
 							break;
 						case 4: /*Spectre*/
 							j=strpos2(line, ")", 1);
 							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
 							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
 							break;
 						case 50: /*Qucs*/
+							break;
+						case 51: /*ngspice*/
+							j=ExtractDeviceValuePosition(line, 1);
+							strsub(laux2, line, 1, j);
+							StripSpaces(laux2);
+							sprintf(laux3, "X%s %s_sub", laux2, rf[i].subckt);
 							break;
 						case 100: /*general*/
 							break;
@@ -854,6 +917,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 										strsub(laux2, line, j+1, k-j-1);
 										break;
 									case 50: /*Qucs*/
+										break;
+									case 51: /*ngspice*/
+										strsub(laux2, line, j, k-j);
 										break;
 									case 100: /*general*/
 										break;
@@ -973,6 +1039,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 					break;
 				case 50: /*Qucs*/
 					break;
+				case 51: /*ngspice*/
+					k = strpos2(laux, "_sub ", 1);
+					break;
 				case 100: /*general*/
 					break;
 				default:
@@ -1013,6 +1082,9 @@ int RFModule(char *line, int optimize, FILE* fout)
 					k = strpos2(laux, "_sub ", 1);
 					break;
 				case 50: /*Qucs*/
+					break;
+				case 51: /*ngspice*/
+					k = strpos2(laux, "_sub ", 1);
 					break;
 				case 100: /*general*/
 					break;

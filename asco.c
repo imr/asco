@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2004-2011 Joao Ramos
+ * Copyright (C) 2004-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre', 'Qucs' and 'ngspice' circuit simulator optimization capabilities
  *
  */
 
@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 		printf("          asco -ltspice <inputfile>.net\n");
 		printf("          asco -spectre <inputfile>.scs\n");
 		printf("          asco -qucs    <inputfile>.txt\n");
+		printf("          asco -ngspice <inputfile>.sp\n");
 		printf("          asco -general <inputfile>.*\n");
 		printf("\nDefault file extension is assumed if not specified\n\n\n");
 		exit(EXIT_FAILURE);
@@ -179,6 +180,13 @@ int main(int argc, char *argv[])
 			if (!strcmp(argv[1], "qucs")) {
 				spice=50;
 				printf("INFO:  Qucs initialization on '%s'\n", hostname);
+				fflush(stdout);
+			}
+			break;
+		case 'n': /*ngspice*/
+			if (!strcmp(argv[1], "ngspice")) {
+				spice=51;
+				printf("INFO:  ngspice initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;
@@ -347,6 +355,13 @@ int main(int argc, char *argv[])
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				break;
 			case 50: /*Qucs*/
+				#ifndef __MINGW32__
+				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
+				#else
+				sprintf(lkk, "copy /y %s.log %s/%s_%d.log > NUL", hostname, currentdir, hostname, pid);
+				#endif
+				break;
+			case 51: /*ngspice*/
 				#ifndef __MINGW32__
 				sprintf(lkk, "cp -fp %s.log %s/%s_%d.log > /dev/null", hostname, currentdir, hostname, pid);
 				#else

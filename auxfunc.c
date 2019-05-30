@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999-2011 Joao Ramos
+ * Copyright (C) 1999-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -151,7 +151,7 @@ void fgets2(char *s, int n, FILE *stream)
 		*TEMP = 0;
 
 	if ((int)strlen (s)>n-2) { /* n=LONGSTRINGSIZE */
-		printf("INFO:  auxfunc.c - fgets2 -- BUFFER OVERFLOW, maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
+		printf("INFO:  auxfunc.c - fgets2 -- string truncated, maximum string size of %d characters exceeded. Increase LONGSTRINGSIZE in auxfunc.h\n", LONGSTRINGSIZE);
 		/* exit(EXIT_FAILURE); */
 	}
 } /*fgets2*/
@@ -182,6 +182,15 @@ int inlinestrpos(char *s)
 			break;
 		case 50: /*Qucs*/
 			k = 0;
+			break;
+		case 51: /*ngspice*/
+			k = strpos2(s, ";", 1); /*ngspice supports multiple inline comments*/
+			if (k==0) {
+				k = strpos2(s, "$", 1);
+				if (k==0) {
+					k = strpos2(s, "//", 1);
+				}
+			}
 			break;
 		case 100: /*general*/
 			k = 0;
@@ -427,65 +436,47 @@ double asc2real(char *lstring_, int startIndex, int endIndex)
 
 
 	if (lstring[endIndex - 1] > '9' && endIndex != 0) { /*finds number*/
-		/*sprintf(STR1, "%.*s", (endIndex - 1), lstring);*/
-		/*code = (sscanf(STR1, "%lg", &auxNumb) == 0);*/
 		code = (sscanf(lstring, "%lg", &auxNumb) == 0);
 
 		switch (lstring[endIndex - 1]) { /*finds multiple: t,g,x,k, m,u,n,p,f,a,z*/
 			case 't':   /*T: tera*/
 				auxNumb *= 1e+12;
 				break;
-
 			case 'g':   /*G: giga*/
 				auxNumb *= 1e+09;
 				break;
-
 			case 'x':   /*M: mega*/
 				auxNumb *= 1e+06;
 				break;
-
 			case 'k':   /*k: kilo*/
 				auxNumb *= 1e+03;
 				break;
-
 			case 'm':   /*m: mill*/
 				auxNumb *= 1e-03;
 				break;
-
 			case 'u':   /*u: micro*/
 				auxNumb *= 1e-06;
 				break;
-
 			case 'n':   /*n: nano*/
 				auxNumb *= 1e-09;
 				break;
-
 			case 'p':   /*p: pico*/
 				auxNumb *= 1e-12;
 				break;
-
 			case 'f':   /*f: femto*/
 				auxNumb *= 1e-15;
 				break;
-
 			case 'a':   /*a: atto*/
 				auxNumb *= 1e-18;
 				break;
-
 			case 'z':   /*z: zepto*/
 				auxNumb *= 1e-21;
 				break;
-
 			default:    /*correct this to print lkk*/
 				printf("auxfunc.c - asc2real -- Something unexpected has happened!\n");
 				exit(EXIT_FAILURE);
-				/*printf("Error: Variable not recognized: '%c' in '%s'\n", lstring[endIndex - 1], lstring);*/
-				/* auxNumb *= 0; */
-				/* break; */
 		}
 	} else {/*finds number*/
-		/*sprintf(STR1, "%.*s", (int)endIndex, lstring);*/
-		/*code = (sscanf(STR1, "%lg", &auxNumb) == 0);*/
 		code = (sscanf(lstring, "%lg", &auxNumb) == 0);
 	}
 
@@ -547,10 +538,8 @@ void InsertString(char *ret, char *data, int a, int b)
 {
 	char begin[LONGSTRINGSIZE], end[LONGSTRINGSIZE];
 	
-	{
-		strsub(begin, ret, 1, a-1);
-		strsub(end,   ret, b, (int)strlen(ret));
+	strsub(begin, ret, 1, a-1);
+	strsub(end,   ret, b, (int)strlen(ret));
 
-		sprintf(ret, "%s%s%s", begin, data, end);
-	}
+	sprintf(ret, "%s%s%s", begin, data, end);
 }

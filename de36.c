@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 Joao Ramos
+ * Copyright (C) 2005-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
@@ -218,6 +218,7 @@ double LoadAVG()
 			processor++;
 		}
 	}
+	fclose(fpin_ptr);
 
 	system("cat /proc/loadavg > loadavg");
 	if ((fpin_ptr =fopen("loadavg" ,"r")) == 0) {
@@ -225,6 +226,7 @@ double LoadAVG()
 		exit(EXIT_FAILURE);
 	}
 	fgets2(lkk, LONGSTRINGSIZE, fpin_ptr);       /*read and*/
+	fclose(fpin_ptr);
 	i = strpos2(lkk, " ", 1);
 	if (i != 0)
 		lkk[i]='\0';

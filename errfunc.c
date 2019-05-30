@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2004-2011 Joao Ramos
+ * Copyright (C) 2004-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre', 'Qucs' and 'ngspice' circuit simulator optimization capabilities
  *
  */
 
@@ -111,7 +111,7 @@ double CostFunction()
 				if (measurements[i].measured_value <= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (!fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
+					if (!fcmp(measurements[i].constraint_value, 0)) {                /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -127,7 +127,7 @@ double CostFunction()
 				if (measurements[i].measured_value >= measurements[i].constraint_value)
 					cost = cost;                                                     /*no penalty*/
 				else {
-					if (!fcmp(measurements[i].constraint_value, 0)) {                 /*special case when constraint==0*/
+					if (!fcmp(measurements[i].constraint_value, 0)) {                /*special case when constraint==0*/
 						cost=cost + Wcon*fabs((measurements[i].constraint_value  /*penalty=Wcon*/
 								- measurements[i].measured_value));
 					} else {
@@ -140,7 +140,7 @@ double CostFunction()
 				break;
 			case 6: /*EQ                                            ===> constraint (EQ)*/
 				measurements[i].constraint_met=1;                                        /*assume that the constraint is met*/
-				if (!fcmp(measurements[i].constraint_value, 0)) {                         /*special case when constraint==0*/
+				if (!fcmp(measurements[i].constraint_value, 0)) {                        /*special case when constraint==0*/
 					if ( (measurements[i].measured_value >= (-tolerance)) &&
 					     (measurements[i].measured_value <= (+tolerance)) )
 						cost = cost;                                             /*no penalty*/
@@ -217,6 +217,9 @@ void LogtoFile(double cost)
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
 		case 50: /*Qucs*/
+			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
+			break;
+		case 51: /*ngspice*/
 			sprintf(laux, "%s.log", hostname);      /*hostname is "longmorn"*/
 			break;
 		case 100: /*general*/
@@ -313,6 +316,8 @@ void WriteToMem(int num_measures)
 				break;
 			case 50: /*Qucs*/
 				break;
+			case 51: /*ngspice*/
+				break;
 			case 100: /*general*/
 				break;
 			default:
@@ -327,9 +332,12 @@ void WriteToMem(int num_measures)
 	while (measure[i].search[0] != '\0') {
 		strcpy(laux, UNIQUECHAR);
 		ii=0;
-		ii=     strpos2(measure[i].var_name, laux, 1); /*if UNIQUECHAR is inexisting in measure[i].var_name*/
-		Str2Lower(laux);
-		ii=ii + strpos2(measure[i].var_name, laux, 1); /* and in Str2Lower(UNIQUECHAR) as well, this means we are processing a line with "MEASURE_VAR"*/
+		ii=     strpos2(measure[i].var_name, laux, 1); /*if UNIQUECHAR is inexisting in measure[i].var_name and in Str2Lower(UNIQUECHAR)      */
+		Str2Lower(laux);                               /*as well, this means we are processing a "MEASURE_VAR" line with intermediate data.   */
+		ii=ii + strpos2(measure[i].var_name, laux, 1); /*ALL OTHERS MUST enter the following 'if' to have its measure[i].data processed       */
+		if (ii >1) {
+			ii=0;                                  /*UNIQUECHAR must be the first character. If not, this is an intermediate "MEASURE_VAR"*/
+		}
 		if (ii) {
 			strcpy(laux, UNIQUECHAR);
 			ii=(int)strlen(laux);
@@ -473,6 +481,9 @@ double errfunc(char *filename, double *x)
 		case 50: /*Qucs*/
 			sprintf(lkk, "%s%s", hostname, ".txt");
 			break;
+		case 51: /*ngspice*/
+			sprintf(lkk, "%s%s", hostname, ".sp");
+			break;
 		case 100: /*general*/
 			sprintf(lkk, "%s%s", hostname, ".txt");
 			break;
@@ -539,6 +550,12 @@ double errfunc(char *filename, double *x)
 			break;
 		case 50: /*Qucs*/                   /* ".end" does not exist in Qucs syntax */
 			break;
+		case 51: /*ngspice*/
+			if (strcmp(laux, ".end")) { /*Exit if ".end" is not found*/
+				printf("errfunc.c - Step2.1 -- End not found in %s.sp\n", filename);
+				exit(EXIT_FAILURE);
+			}
+			break;
 		case 100: /*general*/
 			break;
 		default:
@@ -561,6 +578,9 @@ double errfunc(char *filename, double *x)
 		case 4: /*Spectre*/
 			break;
 		case 50: /*Qucs*/
+			break;
+		case 51: /*ngspice*/
+			fprintf(fspice_input, "%s\n", ".end");
 			break;
 		case 100: /*general*/
 			break;
@@ -604,6 +624,13 @@ double errfunc(char *filename, double *x)
 			sprintf(lkk, "nice -n 19 qucsator -i %s.txt -o %s.dat > /dev/null", hostname, hostname);
 			#else
 			sprintf(lkk, "qucsator -i %s.txt -o %s.dat > NUL", hostname, hostname);
+			#endif
+			break;
+		case 51: /*ngspice*/
+			#ifndef __MINGW32__
+			sprintf(lkk, "nice -n 19 ngspice -b -o %s.out %s.sp > /dev/null 2>&1", hostname, hostname);
+			#else
+			sprintf(lkk, "ngspice -o %s.out %s.sp > NUL", hostname, hostname);
 			#endif
 			break;
 		case 100: /*general*/
@@ -651,6 +678,9 @@ double errfunc(char *filename, double *x)
 			break;
 		case 50: /*Qucs*/
 			sprintf(lkk, "%s.dat", hostname);
+			break;
+		case 51: /*ngspice*/
+			sprintf(lkk, "%s.out", hostname);
 			break;
 		case 100: /*general*/
 			sprintf(lkk, "%s.out", hostname);
@@ -772,6 +802,7 @@ strcpy (filename_x, filename);
 					fseek(fspice_tmp, -6, SEEK_END); /*properly position the pointer*/
 					#endif
 					fprintf(fspice_tmp, ".INCLUDE alter.inc\n");  /*write*/
+					fclose(fspice_log);
 				}
 				/* fseek(fspice_tmp, 0, SEEK_END); */ /*properly position the pointer*/
 				fprintf(fspice_tmp, ".end\n");  /*add ".end"*/

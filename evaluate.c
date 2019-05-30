@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2010 Joao Ramos
+ * Copyright (C) 2004-2013 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html

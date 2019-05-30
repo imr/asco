@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2004-2007 Joao Ramos
+ * Copyright (C) 2004-2012 Joao Ramos
  * Your use of this code is subject to the terms and conditions of the
  * GNU general public license version 2. See "COPYING" or
  * http://www.gnu.org/licenses/gpl.html
  *
- * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre' and 'Qucs' circuit simulator optimization capabilities
+ * Plug-in to add to 'Eldo', 'HSPICE', 'LTspice', 'Spectre', 'Qucs' and 'ngspice' circuit simulator optimization capabilities
  *
  */
 
@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 		printf("          asco-test -ltspice <inputfile>.net\n");
 		printf("          asco-test -spectre <inputfile>.scs\n");
 		printf("          asco-test -qucs    <inputfile>.txt\n");
+		printf("          asco-test -ngspice <inputfile>.sp\n");
 		printf("          asco-test -general <inputfile>.*\n");
 		printf("\nDefault file extension is assumed if not specified\n\n\n");
 		exit(EXIT_FAILURE);
@@ -145,6 +146,13 @@ int main(int argc, char *argv[])
 			if (!strcmp(argv[1], "qucs")) {
 				spice=50;
 				printf("INFO:  Qucs initialization on '%s'\n", hostname);
+				fflush(stdout);
+			}
+			break;
+		case 'n': /*ngspice*/
+			if (!strcmp(argv[1], "ngspice")) {
+				spice=51;
+				printf("INFO:  ngspice initialization on '%s'\n", hostname);
 				fflush(stdout);
 			}
 			break;
